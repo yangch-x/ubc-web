@@ -11,52 +11,29 @@ import shipmentService from 'services/Shipment';
 import styles from './index.module.less';
 
 export default function Shipment() {
-  // 定义转换数据的函数
-  function transformData(data) {
-    return data.map((item) => {
-      return {
-        ...item,
-        packDt: formatDate(item.packDt),
-        shipDt: formatDate(item.shipDt),
-        arriveDt: formatDate(item.arriveDt),
-      };
-    });
-  }
-
   const [searchParams, setSearchParams] = useState({
     pageNo: 1,
     pageSize: 15,
   });
-  // 格式化日期字段的函数
-  const formatDate = (dateString) => {
-    const date = new Date(dateString);
-    const year = date.getFullYear();
-    const month = String(date.getMonth() + 1).padStart(2, '0'); // 月份从0开始，所以要加1
-    const day = String(date.getDate()).padStart(2, '0');
-    return `${year}-${month}-${day}`;
-  };
 
   const [tableData, setTableData] = useState([]);
   const [selection, setSelection] = useState([]);
   const [loading, setLoading] = useState();
   const [pagination, setPagination] = useState({ total: 0 });
   const loadData = useCallback(() => {
-    console.log('loadData called');
     // setLoading(true);
-    console.log('searchParams:', searchParams);
     shipmentService.search(searchParams).then((res) => {
-      console.log('Response is successful:', res);
-
       setLoading(false);
-      console.log('search response:', res);
-      console.log(res);
+      if (res.code != 200) {
+        message.error(`${res.msg}`); // 显示错误消息
+        return;
+      }
       setPagination({
         total: res.data.total,
         pageNo: res.data.pageNo,
         pageSize: res.data.pageSize,
       });
-      const transformedData = transformData(res.data.res);
-      setTableData([...tableData, ...transformedData]);
+      setTableData(res.data.res);
       setSelection([]);
     });
   }, [searchParams]);
@@ -172,8 +149,7 @@ export default function Shipment() {
         className={'f-search'}
         onEvent={searchEvent}
         columns={[
-          { type: 'input', prop: 'houseBlNum', label: 'Bill of Landing' },
-          { type: 'input', prop: 'shipFrom', label: 'Ship From' },
+          { type: 'input', prop: 'houseBlNum', label: '' },
           {
             type: 'button-primary',
             prop: 'search',

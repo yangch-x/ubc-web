@@ -115,6 +115,11 @@ class NewShipment extends Component {
     shipmentService
       .saveShipmentAndIVoice(values)
       .then((res) => {
+        if (res.code != 200) {
+          message.error(`${res.msg}`); // 显示错误消息
+          return;
+        }
+
         this.setState({
           region: {
             ...this.state.region,
@@ -183,15 +188,16 @@ class NewShipment extends Component {
   handleUploadChange = (info) => {
     if (info.file.status === 'done') {
       const response = info.file.response;
-      message.success(`${info.file.name} file uploaded successfully.`);
-      console.log('File upload response:', response);
-      this.setState(() => ({
-        tableData: response.data.res,
-      }));
+
+      if (response.code === 200) {
+        this.setState(() => ({
+          tableData: response.data.res,
+        }));
+      } else {
+        message.error(`Error: ${response.msg}`);
+      }
     } else if (info.file.status === 'error') {
       message.error(`${info.file.name} file upload failed.`);
-    } else {
-      console.log('File upload in progress', info);
     }
   };
 
@@ -241,6 +247,60 @@ class NewShipment extends Component {
     }
   };
 
+  handleEtdDtDateChange = (date, dateString) => {
+    console.log('Selected date: ', date);
+    console.log('Formatted date: ', dateString);
+
+    let { formData } = this.state;
+    let invoiceDt = formData.invoiceDt;
+
+    if (formData.customerCode && date) {
+      const gap =
+        this.state.config.customerDueDateMap[formData.customerCode].dueDateGap;
+      invoiceDt = date.add(gap, 'days');
+    }
+    this.setState(
+      {
+        formData: {
+          ...formData,
+          etdDt: date,
+          invoiceDt,
+        },
+      },
+      () => {
+        this.form1Ref.current?.setFieldsValue({
+          invoiceDt: this.state.formData.invoiceDt,
+        });
+      }
+    );
+  };
+
+  handleCustomerCodeSelectChange = (value) => {
+    const customerDueDate = this.state.config.customerDueDateMap[value];
+    console.log('Selected Customer Code: ', customerDueDate);
+
+    let { formData } = this.state;
+    let invoiceDt = formData.invoiceDt;
+
+    if (formData.etdDt) {
+      invoiceDt = formData.etdDt.add(customerDueDate.dueDateGap, 'days');
+    }
+    this.setState(
+      {
+        formData: {
+          ...formData,
+          customerCode: value,
+          invoiceDt,
+        },
+      },
+      () => {
+        this.form1Ref.current?.setFieldsValue({
+          invoiceDt: this.state.formData.invoiceDt,
+        });
+      }
+    );
+  };
+
   render() {
     const { step, formData, tableData, config } = this.state;
 
@@ -275,49 +335,122 @@ class NewShipment extends Component {
                   </Form.Item>
                 </Col>
                 <Col span={8}>
-                  <Form.Item label="Ship From" name="shipFrom">
+                  <Form.Item
+                    label="Ship From"
+                    name="shipFrom"
+                    rules={[
+                      {
+                        required: true,
+                        message: 'Ship From is required',
+                      },
+                    ]}
+                  >
                     <Input />
                   </Form.Item>
                 </Col>
                 <Col span={8}>
-                  <Form.Item label="Manufacture" name="manufacture">
+                  <Form.Item
+                    label="Manufacture"
+                    name="manufacture"
+                    rules={[
+                      {
+                        required: true,
+                        message: 'Manufacture is required',
+                      },
+                    ]}
+                  >
                     <Input />
                   </Form.Item>
                 </Col>
               </Row>
               <Row gutter={16}>
                 <Col span={8}>
-                  <Form.Item label="Country of Origin" name="countryOfOrigin">
+                  <Form.Item
+                    label="Country of Origin"
+                    name="countryOfOrigin"
+                    rules={[
+                      {
+                        required: true,
+                        message: 'Country of Origin is required',
+                      },
+                    ]}
+                  >
                     <Input />
                   </Form.Item>
                 </Col>
                 <Col span={8}>
-                  <Form.Item label="Vessel/Flight" name="vesselFlight">
+                  <Form.Item
+                    label="Vessel/Flight"
+                    name="vesselFlight"
+                    rules={[
+                      {
+                        required: true,
+                        message: 'Vessel/Flight is required',
+                      },
+                    ]}
+                  >
                     <Input />
                   </Form.Item>
                 </Col>
                 <Col span={8}>
-                  <Form.Item label="UBC PI" name="ubcPi">
+                  <Form.Item
+                    label="UBC PI"
+                    name="ubcPi"
+                    rules={[
+                      {
+                        required: true,
+                        message: 'UBC PI is required',
+                      },
+                    ]}
+                  >
                     <Input />
                   </Form.Item>
                 </Col>
               </Row>
               <Row gutter={16}>
                 <Col span={8}>
-                  <Form.Item label="ETD Dt" name="etdDt">
-                    <DatePicker />
+                  <Form.Item
+                    label="ETD Dt"
+                    name="etdDt"
+                    rules={[
+                      {
+                        required: true,
+                        message: 'ETD Dt is required',
+                      },
+                    ]}
+                  >
+                    <DatePicker onChange={this.handleEtdDtDateChange} />
                   </Form.Item>
                 </Col>
                 <Col span={8}>
-                  <Form.Item label="Customer Code" name="customerCode">
+                  <Form.Item
+                    label="Customer Code"
+                    name="customerCode"
+                    rules={[
+                      {
+                        required: true,
+                        message: 'Country of Origin is required',
+                      },
+                    ]}
+                  >
                     <Select
                       placeholder="Please Select"
                       options={config.customerCodeOptions}
+                      onChange={this.handleCustomerCodeSelectChange}
                     />
                   </Form.Item>
                 </Col>
                 <Col span={8}>
-                  <Form.Item label="Ship Method" name="shipMethod">
+                  <Form.Item
+                    label="Ship Method"
+                    name="shipMethod"
+                    rules={[
+                      {
+                        required: true,
+                        message: 'Ship Method is required',
+                      },
+                    ]}
+                  >
                     <Select placeholder="Please Select">
                       <Select.Option value="Air">Air</Select.Option>
                       <Select.Option value="Ocean">Ocean</Select.Option>
@@ -331,7 +464,16 @@ class NewShipment extends Component {
               <Divider orientation="left">Invoice</Divider>
               <Row gutter={16}>
                 <Col span={8}>
-                  <Form.Item label="Invoice Code" name="invoiceCode">
+                  <Form.Item
+                    label="Invoice Code"
+                    name="invoiceCode"
+                    rules={[
+                      {
+                        required: true,
+                        message: 'Invoice Code is required',
+                      },
+                    ]}
+                  >
                     <Input />
                   </Form.Item>
                 </Col>
@@ -340,6 +482,12 @@ class NewShipment extends Component {
                     label="Additional Cost"
                     name="additionalCost"
                     initialValue={0.0}
+                    rules={[
+                      {
+                        required: true,
+                        message: 'Additional Cost is required',
+                      },
+                    ]}
                   >
                     <InputNumber />
                   </Form.Item>
@@ -349,6 +497,12 @@ class NewShipment extends Component {
                     label="Deposit Amt"
                     name="depositAmt"
                     initialValue={0.0}
+                    rules={[
+                      {
+                        required: true,
+                        message: 'Deposit Amt is required',
+                      },
+                    ]}
                   >
                     <InputNumber />
                   </Form.Item>
@@ -356,12 +510,30 @@ class NewShipment extends Component {
               </Row>
               <Row gutter={16}>
                 <Col span={8}>
-                  <Form.Item label="Invoice Dt" name="invoiceDt">
-                    <DatePicker />
+                  <Form.Item
+                    label="Invoice Dt"
+                    name="invoiceDt"
+                    rules={[
+                      {
+                        required: true,
+                        message: 'Invoice Dt is required',
+                      },
+                    ]}
+                  >
+                    <DatePicker value={formData.invoiceDt} />
                   </Form.Item>
                 </Col>
                 <Col span={8}>
-                  <Form.Item label="Invoice Due" name="invoiceDue">
+                  <Form.Item
+                    label="Invoice Due"
+                    name="invoiceDue"
+                    rules={[
+                      {
+                        required: true,
+                        message: 'Invoice Due is required',
+                      },
+                    ]}
+                  >
                     <DatePicker />
                   </Form.Item>
                 </Col>
