@@ -180,6 +180,49 @@ class NewShipment extends Component {
       });
   };
 
+  handleEtdDtDateChange = (date, dateString) => {
+    console.log('Selected date: ', date);
+    console.log('Formatted date: ', dateString);
+
+    let { formData } = this.state;
+    let invoiceDt = formData.invoiceDt;
+
+    if (formData.customerCode) {
+      const gap = this.state.config.customerDueDateMap[formData.customerCode].dueDateGap;
+      invoiceDt = date.add(gap, 'days');
+    }
+    this.setState({
+      formData: {
+        ...formData,
+        etdDt: date,
+        invoiceDt,
+      },
+    }, () => {
+      this.form1Ref.current?.setFieldsValue({ invoiceDt: this.state.formData.invoiceDt });
+    });
+  };
+
+  handleCustomerCodeSelectChange = (value) => {
+    const customerDueDate = this.state.config.customerDueDateMap[value];
+    console.log('Selected Customer Code: ', customerDueDate);
+
+    let { formData } = this.state;
+    let invoiceDt = formData.invoiceDt;
+
+    if (formData.etdDt) {
+      invoiceDt = formData.etdDt.add(customerDueDate.dueDateGap, 'days');
+    }
+    this.setState({
+      formData: {
+        ...formData,
+        customerCode: value,
+        invoiceDt,
+      },
+    }, () => {
+      this.form1Ref.current?.setFieldsValue({ invoiceDt: this.state.formData.invoiceDt });
+    });
+  };
+
   handleUploadChange = (info) => {
     if (info.file.status === 'done') {
       const response = info.file.response;
@@ -305,7 +348,7 @@ class NewShipment extends Component {
               <Row gutter={16}>
                 <Col span={8}>
                   <Form.Item label="ETD Dt" name="etdDt">
-                    <DatePicker />
+                    <DatePicker onChange={this.handleEtdDtDateChange} />
                   </Form.Item>
                 </Col>
                 <Col span={8}>
@@ -313,6 +356,7 @@ class NewShipment extends Component {
                     <Select
                       placeholder="Please Select"
                       options={config.customerCodeOptions}
+                      onChange={this.handleCustomerCodeSelectChange}
                     />
                   </Form.Item>
                 </Col>
@@ -357,7 +401,9 @@ class NewShipment extends Component {
               <Row gutter={16}>
                 <Col span={8}>
                   <Form.Item label="Invoice Dt" name="invoiceDt">
-                    <DatePicker />
+                    <DatePicker
+                      value={formData.invoiceDt}
+                    />
                   </Form.Item>
                 </Col>
                 <Col span={8}>
