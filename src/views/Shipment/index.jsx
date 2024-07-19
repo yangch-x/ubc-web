@@ -2,6 +2,8 @@ import {
   SearchOutlined,
   PlusOutlined,
   DeleteOutlined,
+  SortAscendingOutlined,
+  SortDescendingOutlined,
 } from '@ant-design/icons';
 import { Search, Region, Table, Dialog, Form } from 'freedomen';
 import { useState, useCallback, useEffect } from 'react';
@@ -18,13 +20,16 @@ export default function Shipment() {
 
   const [tableData, setTableData] = useState([]);
   const [selection, setSelection] = useState([]);
-  const [loading, setLoading] = useState();
+  const [loading, setLoading] = useState(false);
   const [pagination, setPagination] = useState({ total: 0 });
+  const [sortField, setSortField] = useState(null);
+  const [sortOrder, setSortOrder] = useState(null);
+
   const loadData = useCallback(() => {
-    // setLoading(true);
+    setLoading(true);
     shipmentService.search(searchParams).then((res) => {
       setLoading(false);
-      if (res.code != 200) {
+      if (res.code !== 200) {
         message.error(`${res.msg}`); // 显示错误消息
         return;
       }
@@ -37,14 +42,17 @@ export default function Shipment() {
       setSelection([]);
     });
   }, [searchParams]);
+
   const setReSearch = useCallback((row) => {
     setSearchParams({ ...row, pageNo: 1 });
   }, []);
+
   const searchEvent = (params) => {
     if (params.prop === 'search' && params.type === 'click') {
       setSearchParams(params.row);
     }
   };
+
   const regionEvent = (params) => {
     if (params.prop === 'add' && params.type === 'click') {
       history.push('/newshpiment');
@@ -52,7 +60,7 @@ export default function Shipment() {
       Modal.confirm({
         content: '确定要删除选中的' + selection.length + '条数据？',
         onOk() {
-          //此处id按实际字段名取
+          // 此处id按实际字段名取
           shipmentService.deletes(selection.map((el) => el.id)).then((res) => {
             message.success('删除成功！');
             loadData();
@@ -61,6 +69,7 @@ export default function Shipment() {
       });
     }
   };
+
   const tableEvent = (params) => {
     if (params.prop === 'edit' && params.type === 'click') {
       Dialog.open('fdialog', '编辑').then((set) =>
@@ -81,6 +90,36 @@ export default function Shipment() {
       setSelection(params.value);
     }
   };
+
+  const handleSort = (column) => {
+    let order = 'ascend';
+    if (column === sortField) {
+      order = sortOrder === 'ascend' ? 'descend' : 'ascend';
+    }
+    setSortField(column);
+    setSortOrder(order);
+
+    const sortedData = [...tableData].sort((a, b) => {
+      if (order === 'ascend') {
+        if (a[column] < b[column]) return -1;
+        if (a[column] > b[column]) return 1;
+        return 0;
+      }
+      if (a[column] > b[column]) return -1;
+      if (a[column] < b[column]) return 1;
+      return 0;
+    });
+
+    setTableData(sortedData);
+  };
+
+  const getSortIcon = (column) => {
+    if (sortField === column) {
+      return sortOrder === 'ascend' ? <SortAscendingOutlined /> : <SortDescendingOutlined />;
+    }
+    return <SortAscendingOutlined style={{opacity: 0.2}} />;
+  };
+
   const getDialogForm = (formData) => {
     return (
       <Form
@@ -89,7 +128,7 @@ export default function Shipment() {
           shipmentService
             .update(data)
             .then((res) => {
-              //也可以根据是否有 id 不同提示
+              // 也可以根据是否有 id 不同提示
               message.success('操作成功！');
               loadData();
               Dialog.close('fdialog');
@@ -140,9 +179,11 @@ export default function Shipment() {
       />
     );
   };
+
   useEffect(() => {
     loadData();
   }, [loadData]);
+
   return (
     <div className={'freedomen-page'}>
       <Search
@@ -191,32 +232,102 @@ export default function Shipment() {
           {
             type: 'text',
             prop: 'houseBlNum',
-            label: 'Bill of Landing',
+            label: (
+              <div className="sort-container" onClick={() => handleSort('houseBlNum')}>
+                Bill of Landing {getSortIcon('houseBlNum')}
+              </div>
+            ),
+            sorter: true,
             value: 'text',
           },
-          { type: 'text', prop: 'itemCnt', label: 'Item Cnt', value: 'text' },
+          {
+            type: 'text',
+            prop: 'itemCnt',
+            label: (
+              <div className="sort-container" onClick={() => handleSort('itemCnt')}>
+                Item Cnt {getSortIcon('itemCnt')}
+              </div>
+            ),
+            sorter: true,
+            value: 'text',
+          },
           {
             type: 'text',
             prop: 'cartonSize',
-            label: 'Total Volume',
+            label: (
+              <div className="sort-container" onClick={() => handleSort('cartonSize')}>
+                Total Volume {getSortIcon('cartonSize')}
+              </div>
+            ),
+            sorter: true,
             value: 'text',
           },
           {
             type: 'text',
             prop: 'grossWeight',
-            label: 'Total Weight',
+            label: (
+              <div className="sort-container" onClick={() => handleSort('grossWeight')}>
+                Total Weight {getSortIcon('grossWeight')}
+              </div>
+            ),
+            sorter: true,
             value: 'text',
           },
           {
             type: 'text',
             prop: 'customerCode',
-            label: 'Customer Code',
+            label: (
+              <div className="sort-container" onClick={() => handleSort('customerCode')}>
+                Customer Code {getSortIcon('customerCode')}
+              </div>
+            ),
+            sorter: true,
             value: 'text',
           },
-          { type: 'text', prop: 'shipFrom', label: 'Ship From', value: 'text' },
-          { type: 'text', prop: 'exporter', label: 'Exporter', value: 'text' },
-          { type: 'text', prop: 'shipName', label: 'Ship Name', value: 'text' },
-          { type: 'text', prop: 'shipDt', label: 'ETD Dt', value: 'text' },
+          {
+            type: 'text',
+            prop: 'shipFrom',
+            label: (
+              <div className="sort-container" onClick={() => handleSort('shipFrom')}>
+                Ship From {getSortIcon('shipFrom')}
+              </div>
+            ),
+            sorter: true,
+            value: 'text',
+          },
+          {
+            type: 'text',
+            prop: 'exporter',
+            label: (
+              <div className="sort-container" onClick={() => handleSort('exporter')}>
+                Exporter {getSortIcon('exporter')}
+              </div>
+            ),
+            sorter: true,
+            value: 'text',
+          },
+          {
+            type: 'text',
+            prop: 'shipName',
+            label: (
+              <div className="sort-container" onClick={() => handleSort('shipName')}>
+                Ship Name {getSortIcon('shipName')}
+              </div>
+            ),
+            sorter: true,
+            value: 'text',
+          },
+          {
+            type: 'text',
+            prop: 'shipDt',
+            label: (
+              <div className="sort-container" onClick={() => handleSort('shipDt')}>
+                ETD Dt {getSortIcon('shipDt')}
+              </div>
+            ),
+            sorter: true,
+            value: 'text',
+          },
           { type: 'text', prop: 'notes', label: 'Notes', value: 'text' },
           {
             type: 'input',
