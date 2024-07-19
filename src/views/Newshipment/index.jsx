@@ -187,7 +187,7 @@ class NewShipment extends Component {
     let { formData } = this.state;
     let invoiceDt = formData.invoiceDt;
 
-    if (formData.customerCode) {
+    if (formData.customerCode && date) {
       const gap = this.state.config.customerDueDateMap[formData.customerCode].dueDateGap;
       invoiceDt = date.add(gap, 'days');
     }
