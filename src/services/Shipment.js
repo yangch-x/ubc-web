@@ -20,6 +20,14 @@ class ShipmentService {
   saveShipmentAndIVoice(params) {
     return Http.post(`shipment/saveShipmentAndIVoice`, params);
   }
+
+  saveOrUpdate(params) {
+    return Http.post(`shipment/saveOrUpdate`, params);
+  }
+
+  remove(params) {
+    return Http.delete(`shipment/remove`, params);
+  }
 }
 
 const shipmentService = new ShipmentService();

@@ -1,13 +1,19 @@
-import Http from "libs/http"
+import Http from 'libs/http';
 
 class ProjectionService {
-    //查询
-    select(params) {
-        return Http.get(`packing/select`, params, {
-            responseType: "json",
-        })
-    }
+  //查询
+  search(params) {
+    return Http.post(`/projection/search`, params);
+  }
+
+  saveOrUpdate(params) {
+    return Http.post(`projection/saveOrUpdate`, params);
+  }
+
+  remove(params) {
+    return Http.delete(`projection/remove`, params);
+  }
 }
 
-const projectionService = new ProjectionService()
-export default projectionService
+const projectionService = new ProjectionService();
+export default projectionService;

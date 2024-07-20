@@ -36,12 +36,12 @@ axiosInstance.interceptors.response.use(
   },
   (error) => {
     const data = error.response?.data;
-    message.error(data?.message);
-    //todo 跳到登錄
-    // if (1001 === data?.code) {
-    //   history.replace('/login')
-    // }
-    return Promise.reject(error.response);
+    if (data && data.msg) {
+      message.error(data.msg);
+    } else {
+      message.error('请求失败，请稍后重试');
+    }
+    return Promise.reject(error);
   }
 );
 

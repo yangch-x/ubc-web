@@ -7,9 +7,9 @@ import { Search, Region, Table, Dialog, Form } from 'freedomen';
 import { useState, useCallback, useEffect } from 'react';
 import { message, Modal } from 'antd';
 import { history } from 'libs/util';
-import shipmentService from 'services/Shipment';
+import projectionService from 'services/Projection';
 import styles from './index.module.less';
-
+import * as systemConfig from 'systemConfig';
 export default function Shipment() {
   // 定义转换数据的函数
   function transformData(data) {
@@ -42,23 +42,32 @@ export default function Shipment() {
   const [pagination, setPagination] = useState({ total: 0 });
   const loadData = useCallback(() => {
     console.log('loadData called');
-    // setLoading(true);
+    setLoading(true);
     console.log('searchParams:', searchParams);
-    shipmentService.search(searchParams).then((res) => {
-      console.log('Response is successful:', res);
+    projectionService
+      .search(searchParams)
+      .then((res) => {
+        console.log('Response is successful:', res);
 
-      setLoading(false);
-      console.log('search response:', res);
-      console.log(res);
-      setPagination({
-        total: res.data.total,
-        pageNo: res.data.pageNo,
-        pageSize: res.data.pageSize,
+        setLoading(false);
+        console.log('search response:', res);
+        console.log(res);
+        setPagination({
+          total: res.data.total,
+          pageNo: res.data.pageNo,
+          pageSize: res.data.pageSize,
+        }).catch((error) => {
+          setLoading(false);
+          console.error(error);
+        });
+        const transformedData = transformData(res.data.res);
+        setTableData([...tableData, ...transformedData]);
+        setSelection([]);
+      })
+      .catch((error) => {
+        setLoading(false);
+        console.error(error);
       });
-      const transformedData = transformData(res.data.res);
-      setTableData([...tableData, ...transformedData]);
-      setSelection([]);
-    });
   }, [searchParams]);
   const setReSearch = useCallback((row) => {
     setSearchParams({ ...row, pageNo: 1 });
@@ -70,16 +79,20 @@ export default function Shipment() {
   };
   const regionEvent = (params) => {
     if (params.prop === 'add' && params.type === 'click') {
-      history.push('/newshpiment');
+      Dialog.open('fdialog', '新增').then((set) =>
+        set(getDialogForm(params.row))
+      );
     } else if (params.prop === 'dels' && params.type === 'click') {
       Modal.confirm({
         content: '确定要删除选中的' + selection.length + '条数据？',
         onOk() {
           //此处id按实际字段名取
-          shipmentService.deletes(selection.map((el) => el.id)).then((res) => {
-            message.success('删除成功！');
-            loadData();
-          });
+          //   projectionService
+          //     .deletes(selection.map((el) => el.id))
+          //     .then((res) => {
+          //       message.success('删除成功！');
+          //       loadData();
+          //     });
         },
       });
     }
@@ -90,10 +103,16 @@ export default function Shipment() {
         set(getDialogForm(params.row))
       );
     } else if (params.prop === 'pdel' && params.type === 'confirm') {
-      shipmentService.remove(params.row).then((res) => {
-        message.success('删除成功！');
-        loadData();
-      });
+      projectionService
+        .remove(params.row)
+        .then((res) => {
+          message.success('删除成功！');
+          loadData();
+        })
+        .catch((error) => {
+          setLoading(false);
+          console.error(error);
+        });
     } else if (params.prop === '$page') {
       setSearchParams({
         ...searchParams,
@@ -107,9 +126,10 @@ export default function Shipment() {
   const getDialogForm = (formData) => {
     return (
       <Form
+        config={{ labelCol: { span: 8 } }}
         onSubmit={(data) => {
           Dialog.loading('fdialog');
-          shipmentService
+          projectionService
             .update(data)
             .then((res) => {
               //也可以根据是否有 id 不同提示
@@ -124,41 +144,48 @@ export default function Shipment() {
         data={formData}
         columns={[
           {
-            type: 'text',
-            prop: 'customerCode',
-            label: 'Customer Code',
+            type: 'input@w200',
+            prop: 'exFtyInHouse',
+            label: 'Ex-FTY/In House',
             disabled: ({ value, data }) => {},
           },
           {
-            type: 'text',
-            prop: 'houseBlNum',
-            label: 'Bill of Landing',
+            type: 'input@w200',
+            prop: 'customer',
+            label: 'CUSTOMER',
             config: { allowClear: true },
           },
           {
-            type: 'text',
-            prop: 'masterPo',
-            label: 'Master PO',
+            type: 'input@w200',
+            prop: 'customerPo',
+            label: 'CUSTOMER P.O.',
             config: { allowClear: false },
           },
-          { type: 'text', prop: 'rmbInv', label: 'RMB Invoice' },
-          { type: 'text', label: '装运日期' },
-          { type: 'text', prop: 'shipFrom', label: 'Ship From' },
-          { type: 'text', prop: 'shipMethod', label: 'Ship Method' },
+          { type: 'input@w200', prop: 'styleNo', label: 'STYLE NO' },
           {
-            type: 'text',
-            prop: 'origCountry',
-            label: 'Country of Origin',
+            type: 'input@w200',
+            prop: 'descStyleName',
+            label: 'DESC/STYLE NAME',
           },
-          { type: 'text', prop: 'ubcPi', label: 'UBC PI' },
-          { type: 'text', prop: 'shipTerm', label: 'Term' },
-          { type: 'text', prop: 'masterBlNum', label: 'Master Bl Num' },
-          { type: 'text', prop: 'exporter', label: 'Exporter' },
-          { type: 'text', prop: 'shipName', label: 'Ship Name' },
-          { type: 'text', prop: 'shipDt', label: 'Ship Dt' },
-          { type: 'text', prop: 'arriveDt', label: 'ETD Dt' },
-          { type: 'text', prop: 'invoiceTtl', label: 'Invoice Ttl' },
-          { type: 'text', prop: 'notes', label: 'Notes' },
+          { type: 'input@w200', prop: 'color', label: 'COLOR' },
+          { type: 'input@w200', prop: 'fabrication', label: 'FABRICATION' },
+          { type: 'input@w200', prop: 'qtyPc', label: 'QTY/PC' },
+          { type: 'input@w200', prop: 'buy', label: 'BUY' },
+          { type: 'input@w200', prop: 'ttlBuy', label: 'TTL BUY' },
+          { type: 'input@w200', prop: 'sell', label: 'SELL' },
+          { type: 'input@w200', prop: 'ttlSell', label: 'TTL SELL' },
+          { type: 'input@w200', prop: 'vendor', label: 'VENDOR' },
+          {
+            type: 'input@w200',
+            prop: 'waterResistant',
+            label: 'WATER RESISTANT / Y/N',
+          },
+          { type: 'input@w200', prop: 'note', label: 'NOTE' },
+          {
+            type: 'input@w200',
+            prop: 'countryBrandId',
+            label: 'Country&Brand ID',
+          },
         ]}
       />
     );
@@ -172,8 +199,7 @@ export default function Shipment() {
         className={'f-search'}
         onEvent={searchEvent}
         columns={[
-          { type: 'input', prop: 'houseBlNum', label: 'Bill of Landing' },
-          { type: 'input', prop: 'shipFrom', label: 'Ship From' },
+          { type: 'input', prop: 'searchParams', label: '' },
           {
             type: 'button-primary',
             prop: 'search',
@@ -189,8 +215,25 @@ export default function Shipment() {
             {
               type: 'button-primary',
               prop: 'add',
-              value: '新出运',
+              value: '新增',
               config: { icon: <PlusOutlined /> },
+            },
+            {
+              type: 'upload-primary',
+              prop: 'upload',
+              config: {
+                // filetypes: ['pdf'],
+                // fileexts: ['pdf'],
+                action: `${systemConfig.baseURL}/common/upload?usedFor=projection`,
+                onSuccess: (res) => {
+                  if (res.code === 200) {
+                    loadData();
+                  } else {
+                    message.error(`Error: ${res.msg}`);
+                  }
+                  console.log(res);
+                },
+              },
             },
             {
               type: 'button',
@@ -214,41 +257,85 @@ export default function Shipment() {
         columns={[
           {
             type: 'text',
-            prop: 'houseBlNum',
-            label: 'Bill of Landing',
-            value: 'text',
-          },
-          { type: 'text', prop: 'itemCnt', label: 'Item Cnt', value: 'text' },
-          {
-            type: 'text',
-            prop: 'cartonSize',
-            label: 'Total Volume',
-            value: 'text',
-          },
-          {
-            type: 'text',
-            prop: 'grossWeight',
-            label: 'Total Weight',
-            value: 'text',
+            prop: 'arriveDt',
+            label: 'Ex-FTY/In House',
           },
           {
             type: 'text',
             prop: 'customerCode',
-            label: 'Customer Code',
-            value: 'text',
+            label: 'CUSTOMER',
           },
-          { type: 'text', prop: 'shipFrom', label: 'Ship From', value: 'text' },
-          { type: 'text', prop: 'exporter', label: 'Exporter', value: 'text' },
-          { type: 'text', prop: 'shipName', label: 'Ship Name', value: 'text' },
-          { type: 'text', prop: 'shipDt', label: 'ETD Dt', value: 'text' },
-          { type: 'text', prop: 'notes', label: 'Notes', value: 'text' },
           {
-            type: 'input',
-            label: 'asdasd',
-            load: ({ value, data }) => {
-              return false;
-            },
+            type: 'text',
+            prop: 'customerPo',
+            label: 'CUSTOMER P.O.',
           },
+          {
+            type: 'text',
+            prop: 'styleCode',
+            label: 'STYLE NO',
+          },
+          {
+            type: 'text',
+            prop: 'styleName',
+            label: 'DESC/STYLE NAME',
+          },
+          {
+            type: 'text',
+            prop: 'color',
+            label: 'COLOR',
+          },
+          {
+            type: 'text',
+            prop: 'fabrication',
+            label: 'FABRICATION',
+          },
+          {
+            type: 'text',
+            prop: 'poQty',
+            label: 'QTY/PC',
+          },
+          {
+            type: 'text',
+            prop: 'costPrice',
+            label: 'BUY',
+          },
+          {
+            type: 'text',
+            prop: 'ttlBuy',
+            label: 'TTL BUY',
+          },
+          {
+            type: 'text',
+            prop: 'salePrice',
+            label: 'SELL',
+          },
+          {
+            type: 'text',
+            prop: 'ttlSell',
+            label: 'TTL SELL',
+          },
+          {
+            type: 'text',
+            prop: 'exporter',
+            label: 'VENDOR',
+          },
+          {
+            type: 'text',
+            prop: 'waterResistant',
+            label: 'WATER RESISTANT / Y/N',
+          },
+          {
+            type: 'text',
+            prop: 'notes',
+            label: 'NOTE',
+          },
+          {
+            type: 'text',
+            prop: 'country',
+            label: 'Country&Brand ID',
+          },
+
           {
             label: '操作',
             width: 200,

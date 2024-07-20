@@ -15,7 +15,6 @@ export default function Login() {
           loginService
             .login(data)
             .then((res) => {
-              //根据自己的数据结构处理
               const { data = {} } = res;
               if (data.token) {
                 util.setToken(data.token);
@@ -24,7 +23,7 @@ export default function Login() {
               if (data.userId) {
                 util.setUserId(data.userId);
               }
-              history.replace('/shpiment');
+              history.replace('/shipment');
             })
             .catch((e) => {
               setLoading(false);

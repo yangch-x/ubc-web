@@ -16,6 +16,7 @@ const routes = [
   },
   {
     label: 'Invoice',
+    hidden: true,
     path: '/Invoice',
     component: () => import('views/Invoice'),
   },

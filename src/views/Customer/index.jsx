@@ -2,63 +2,50 @@ import {
   SearchOutlined,
   PlusOutlined,
   DeleteOutlined,
+  SortAscendingOutlined,
+  SortDescendingOutlined,
 } from '@ant-design/icons';
 import { Search, Region, Table, Dialog, Form } from 'freedomen';
 import { useState, useCallback, useEffect } from 'react';
 import { message, Modal } from 'antd';
 import { history } from 'libs/util';
-import shipmentService from 'services/Shipment';
+import customerService from 'services/Customer';
 import styles from './index.module.less';
 
 export default function Shipment() {
-  // 定义转换数据的函数
-  function transformData(data) {
-    return data.map((item) => {
-      return {
-        ...item,
-        packDt: formatDate(item.packDt),
-        shipDt: formatDate(item.shipDt),
-        arriveDt: formatDate(item.arriveDt),
-      };
-    });
-  }
-
   const [searchParams, setSearchParams] = useState({
     pageNo: 1,
     pageSize: 15,
   });
-  // 格式化日期字段的函数
-  const formatDate = (dateString) => {
-    const date = new Date(dateString);
-    const year = date.getFullYear();
-    const month = String(date.getMonth() + 1).padStart(2, '0'); // 月份从0开始，所以要加1
-    const day = String(date.getDate()).padStart(2, '0');
-    return `${year}-${month}-${day}`;
-  };
 
   const [tableData, setTableData] = useState([]);
   const [selection, setSelection] = useState([]);
+  const [sortField, setSortField] = useState(null);
+  const [sortOrder, setSortOrder] = useState(null);
   const [loading, setLoading] = useState();
   const [pagination, setPagination] = useState({ total: 0 });
   const loadData = useCallback(() => {
-    console.log('loadData called');
-    // setLoading(true);
-    console.log('searchParams:', searchParams);
-    shipmentService.search(searchParams).then((res) => {
-      console.log('Response is successful:', res);
-
-      setLoading(false);
-      console.log('search response:', res);
-      console.log(res);
-      setPagination({
-        total: res.data.total,
-        pageNo: res.data.pageNo,
-        pageSize: res.data.pageSize,
+    setLoading(true);
+    customerService
+      .search(searchParams)
+      .then((res) => {
+        setLoading(false);
+        if (res.code !== 200) {
+          message.error(`${res.msg}`); // 显示错误消息
+          return;
+        }
+        setPagination({
+          total: res.data.total,
+          pageNo: res.data.pageNo,
+          pageSize: res.data.pageSize,
+        });
+        setTableData(res.data.res);
+        setSelection([]);
+      })
+      .catch((error) => {
+        setLoading(false);
+        console.error(error);
       });
-      const transformedData = transformData(res.data.res);
-      setTableData([...tableData, ...transformedData]);
-      setSelection([]);
-    });
   }, [searchParams]);
   const setReSearch = useCallback((row) => {
     setSearchParams({ ...row, pageNo: 1 });
@@ -70,16 +57,18 @@ export default function Shipment() {
   };
   const regionEvent = (params) => {
     if (params.prop === 'add' && params.type === 'click') {
-      history.push('/newshpiment');
+      Dialog.open('fdialog', '新增').then((set) =>
+        set(getDialogForm(params.row))
+      );
     } else if (params.prop === 'dels' && params.type === 'click') {
       Modal.confirm({
         content: '确定要删除选中的' + selection.length + '条数据？',
         onOk() {
-          //此处id按实际字段名取
-          shipmentService.deletes(selection.map((el) => el.id)).then((res) => {
-            message.success('删除成功！');
-            loadData();
-          });
+          //   //此处id按实际字段名取
+          //   customerService.deletes(selection.map((el) => el.id)).then((res) => {
+          //     message.success('删除成功！');
+          //     loadData();
+          //   });
         },
       });
     }
@@ -90,10 +79,21 @@ export default function Shipment() {
         set(getDialogForm(params.row))
       );
     } else if (params.prop === 'pdel' && params.type === 'confirm') {
-      shipmentService.remove(params.row).then((res) => {
-        message.success('删除成功！');
-        loadData();
-      });
+      const { customerID } = params.row;
+      customerService
+        .remove({ customerID })
+        .then((res) => {
+          if (res.code != 200) {
+            message.error(`${res.msg}`); // 显示错误消息
+            return;
+          }
+          message.success('删除成功！');
+          loadData();
+        })
+        .catch((error) => {
+          setLoading(false);
+          console.error(error);
+        });
     } else if (params.prop === '$page') {
       setSearchParams({
         ...searchParams,
@@ -104,61 +104,125 @@ export default function Shipment() {
       setSelection(params.value);
     }
   };
+
+  const handleSort = (column) => {
+    let order = 'ascend';
+    if (column === sortField) {
+      order = sortOrder === 'ascend' ? 'descend' : 'ascend';
+    }
+    setSortField(column);
+    setSortOrder(order);
+
+    const sortedData = [...tableData].sort((a, b) => {
+      if (order === 'ascend') {
+        if (a[column] < b[column]) return -1;
+        if (a[column] > b[column]) return 1;
+        return 0;
+      }
+      if (a[column] > b[column]) return -1;
+      if (a[column] < b[column]) return 1;
+      return 0;
+    });
+
+    setTableData(sortedData);
+  };
+
+  const getSortIcon = (column) => {
+    if (sortField === column) {
+      return sortOrder === 'ascend' ? (
+        <SortAscendingOutlined />
+      ) : (
+        <SortDescendingOutlined />
+      );
+    }
+    return <SortAscendingOutlined style={{ opacity: 0.2 }} />;
+  };
   const getDialogForm = (formData) => {
     return (
       <Form
+        config={{ labelCol: { span: 6 } }}
         onSubmit={(data) => {
           Dialog.loading('fdialog');
-          shipmentService
-            .update(data)
+          customerService
+            .saveOrUpdate(data)
             .then((res) => {
-              //也可以根据是否有 id 不同提示
+              if (res.code != 200) {
+                message.error(`${res.msg}`); // 显示错误消息
+                return;
+              }
+
               message.success('操作成功！');
               loadData();
               Dialog.close('fdialog');
             })
-            .catch((e) => {
+            .catch((error) => {
+              setLoading(false);
               Dialog.loading('fdialog', false);
+              console.error(error);
             });
         }}
         data={formData}
         columns={[
           {
-            type: 'text',
+            type: 'input@w200',
             prop: 'customerCode',
             label: 'Customer Code',
-            disabled: ({ value, data }) => {},
           },
           {
-            type: 'text',
-            prop: 'houseBlNum',
-            label: 'Bill of Landing',
-            config: { allowClear: true },
+            type: 'input@w200',
+            prop: 'country',
+            label: 'Country',
           },
           {
-            type: 'text',
-            prop: 'masterPo',
-            label: 'Master PO',
-            config: { allowClear: false },
+            type: 'input@w200',
+            prop: 'customerEmail',
+            label: 'Customer Email',
           },
-          { type: 'text', prop: 'rmbInv', label: 'RMB Invoice' },
-          { type: 'text', label: '装运日期' },
-          { type: 'text', prop: 'shipFrom', label: 'Ship From' },
-          { type: 'text', prop: 'shipMethod', label: 'Ship Method' },
           {
-            type: 'text',
-            prop: 'origCountry',
-            label: 'Country of Origin',
+            type: 'input@w200',
+            prop: 'customerName',
+            label: 'Customer Name',
           },
-          { type: 'text', prop: 'ubcPi', label: 'UBC PI' },
-          { type: 'text', prop: 'shipTerm', label: 'Term' },
-          { type: 'text', prop: 'masterBlNum', label: 'Master Bl Num' },
-          { type: 'text', prop: 'exporter', label: 'Exporter' },
-          { type: 'text', prop: 'shipName', label: 'Ship Name' },
-          { type: 'text', prop: 'shipDt', label: 'Ship Dt' },
-          { type: 'text', prop: 'arriveDt', label: 'ETD Dt' },
-          { type: 'text', prop: 'invoiceTtl', label: 'Invoice Ttl' },
-          { type: 'text', prop: 'notes', label: 'Notes' },
+          {
+            type: 'input@w200',
+            prop: 'billingContact',
+            label: 'Billing Contact',
+          },
+          {
+            type: 'input@w200',
+            prop: 'notifyContact',
+            label: 'Notify Contact',
+          },
+          {
+            type: 'input@w200',
+            prop: 'paymentTerm',
+            label: 'Payment Term',
+          },
+          {
+            type: 'input@w200',
+            prop: 'shipTo',
+            label: 'Ship To',
+          },
+          {
+            type: 'input@w200',
+            prop: 'salesPerson',
+            label: 'Sales Person',
+          },
+          {
+            type: 'input@w200',
+            prop: 'ubcMerchandiser',
+            label: 'UBC Merchandiser',
+          },
+          {
+            type: 'input@w200',
+            prop: 'dischargeLoc',
+            label: 'Discharge Loc',
+          },
+          {
+            type: 'input@w200',
+            prop: 'status',
+            label: 'Status',
+          },
         ]}
       />
     );
@@ -172,8 +236,7 @@ export default function Shipment() {
         className={'f-search'}
         onEvent={searchEvent}
         columns={[
-          { type: 'input', prop: 'houseBlNum', label: 'Bill of Landing' },
-          { type: 'input', prop: 'shipFrom', label: 'Ship From' },
+          { type: 'input', prop: 'searchParams', label: '' },
           {
             type: 'button-primary',
             prop: 'search',
@@ -189,7 +252,7 @@ export default function Shipment() {
             {
               type: 'button-primary',
               prop: 'add',
-              value: '新出运',
+              value: '添加',
               config: { icon: <PlusOutlined /> },
             },
             {
@@ -214,40 +277,171 @@ export default function Shipment() {
         columns={[
           {
             type: 'text',
-            prop: 'houseBlNum',
-            label: 'Bill of Landing',
-            value: 'text',
-          },
-          { type: 'text', prop: 'itemCnt', label: 'Item Cnt', value: 'text' },
-          {
-            type: 'text',
-            prop: 'cartonSize',
-            label: 'Total Volume',
-            value: 'text',
-          },
-          {
-            type: 'text',
-            prop: 'grossWeight',
-            label: 'Total Weight',
-            value: 'text',
-          },
-          {
-            type: 'text',
             prop: 'customerCode',
-            label: 'Customer Code',
+            label: (
+              <div
+                className="sort-container"
+                onClick={() => handleSort('customerCode')}
+              >
+                Customer Code {getSortIcon('customerCode')}
+              </div>
+            ),
+            sorter: true,
             value: 'text',
           },
-          { type: 'text', prop: 'shipFrom', label: 'Ship From', value: 'text' },
-          { type: 'text', prop: 'exporter', label: 'Exporter', value: 'text' },
-          { type: 'text', prop: 'shipName', label: 'Ship Name', value: 'text' },
-          { type: 'text', prop: 'shipDt', label: 'ETD Dt', value: 'text' },
-          { type: 'text', prop: 'notes', label: 'Notes', value: 'text' },
           {
-            type: 'input',
-            label: 'asdasd',
-            load: ({ value, data }) => {
-              return false;
-            },
+            type: 'text',
+            prop: 'country',
+            label: (
+              <div
+                className="sort-container"
+                onClick={() => handleSort('country')}
+              >
+                Country {getSortIcon('country')}
+              </div>
+            ),
+            sorter: true,
+            value: 'text',
+          },
+          {
+            type: 'text',
+            prop: 'customerEmail',
+            label: (
+              <div
+                className="sort-container"
+                onClick={() => handleSort('customerEmail')}
+              >
+                Customer Email {getSortIcon('customerEmail')}
+              </div>
+            ),
+            sorter: true,
+            value: 'text',
+          },
+          {
+            type: 'text',
+            prop: 'customerName',
+            label: (
+              <div
+                className="sort-container"
+                onClick={() => handleSort('customerName')}
+              >
+                Customer Name {getSortIcon('customerName')}
+              </div>
+            ),
+            sorter: true,
+            value: 'text',
+          },
+          {
+            type: 'text',
+            prop: 'billingContact',
+            label: (
+              <div
+                className="sort-container"
+                onClick={() => handleSort('billingContact')}
+              >
+                Billing Contact {getSortIcon('billingContact')}
+              </div>
+            ),
+            sorter: true,
+            value: 'text',
+          },
+          {
+            type: 'text',
+            prop: 'notifyContact',
+            label: (
+              <div
+                className="sort-container"
+                onClick={() => handleSort('notifyContact')}
+              >
+                Notify Contact {getSortIcon('notifyContact')}
+              </div>
+            ),
+            sorter: true,
+            value: 'text',
+          },
+          {
+            type: 'text',
+            prop: 'paymentTerm',
+            label: (
+              <div
+                className="sort-container"
+                onClick={() => handleSort('paymentTerm')}
+              >
+                Payment Term {getSortIcon('paymentTerm')}
+              </div>
+            ),
+            sorter: true,
+            value: 'text',
+          },
+          {
+            type: 'text',
+            prop: 'shipTo',
+            label: (
+              <div
+                className="sort-container"
+                onClick={() => handleSort('shipTo')}
+              >
+                Ship To {getSortIcon('shipTo')}
+              </div>
+            ),
+            sorter: true,
+            value: 'text',
+          },
+          {
+            type: 'text',
+            prop: 'salesPerson',
+            label: (
+              <div
+                className="sort-container"
+                onClick={() => handleSort('salesPerson')}
+              >
+                Sales Person {getSortIcon('salesPerson')}
+              </div>
+            ),
+            sorter: true,
+            value: 'text',
+          },
+          {
+            type: 'text',
+            prop: 'ubcMerchandiser',
+            label: (
+              <div
+                className="sort-container"
+                onClick={() => handleSort('ubcMerchandiser')}
+              >
+                UBC Merchandiser {getSortIcon('ubcMerchandiser')}
+              </div>
+            ),
+            sorter: true,
+            value: 'text',
+          },
+          {
+            type: 'text',
+            prop: 'dischargeLoc',
+            label: (
+              <div
+                className="sort-container"
+                onClick={() => handleSort('dischargeLoc')}
+              >
+                Discharge Loc {getSortIcon('dischargeLoc')}
+              </div>
+            ),
+            sorter: true,
+            value: 'text',
+          },
+          {
+            type: 'text',
+            prop: 'status',
+            label: (
+              <div
+                className="sort-container"
+                onClick={() => handleSort('status')}
+              >
+                Status {getSortIcon('status')}
+              </div>
+            ),
+            sorter: true,
+            value: 'text',
           },
           {
             label: '操作',

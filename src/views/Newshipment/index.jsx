@@ -59,44 +59,52 @@ class NewShipment extends Component {
   form1Ref = React.createRef();
 
   componentDidMount() {
-    customerService.searchAll().then((res) => {
-      const options = res.data.customers.map((customer) => ({
-        value: customer.customerCode,
-        label: customer.customerCode,
-      }));
+    customerService
+      .searchAll()
+      .then((res) => {
+        const options = res.data.customers.map((customer) => ({
+          value: customer.customerCode,
+          label: customer.customerCode,
+        }));
 
-      const projectionMap = {};
-      const colors = [];
-      const styleCodes = [];
-      const styleNames = [];
-      const customerPos = [];
-      res.data.projections.forEach((pro) => {
-        const key = `${pro.color}|${pro.styleCode}|${pro.customerPo}`;
-        projectionMap[key] = pro;
-        colors.push(pro.color);
-        styleCodes.push(pro.styleCode);
-        styleNames.push(pro.styleName);
-        customerPos.push(pro.customerPo);
+        const projectionMap = {};
+        const colors = [];
+        const styleCodes = [];
+        const styleNames = [];
+        const customerPos = [];
+        res.data.projections.forEach((pro) => {
+          const key = `${pro.color}|${pro.styleCode}|${pro.customerPo}`;
+          projectionMap[key] = pro;
+          colors.push(pro.color);
+          styleCodes.push(pro.styleCode);
+          styleNames.push(pro.styleName);
+          customerPos.push(pro.customerPo);
+        });
+
+        const customerDueDateMap = res.data.customers.reduce(
+          (map, customer) => {
+            map[customer.customerCode] = customer;
+            return map;
+          },
+          {}
+        );
+
+        this.setState({
+          config: {
+            ...this.state.config,
+            customerCodeOptions: options,
+            customerDueDateMap: customerDueDateMap,
+            colors: colors,
+            styleCodes: styleCodes,
+            styleNames: styleNames,
+            customerPos: customerPos,
+            csc: projectionMap,
+          },
+        });
+      })
+      .catch((error) => {
+        console.error(error);
       });
-
-      const customerDueDateMap = res.data.customers.reduce((map, customer) => {
-        map[customer.customerCode] = customer;
-        return map;
-      }, {});
-
-      this.setState({
-        config: {
-          ...this.state.config,
-          customerCodeOptions: options,
-          customerDueDateMap: customerDueDateMap,
-          colors: colors,
-          styleCodes: styleCodes,
-          styleNames: styleNames,
-          customerPos: customerPos,
-          csc: projectionMap,
-        },
-      });
-    });
   }
 
   handleStepChange = (currentStep) => {
@@ -131,7 +139,9 @@ class NewShipment extends Component {
           step: step + 1,
         });
       })
-      .catch(() => {});
+      .catch((error) => {
+        console.error(error);
+      });
   };
 
   handleAddRow = () => {
@@ -180,8 +190,8 @@ class NewShipment extends Component {
         message.success('Invoice created successfully!');
         history.push('/shipment');
       })
-      .catch(() => {
-        message.error('Failed to create invoice.');
+      .catch((error) => {
+        console.error(error);
       });
   };
 
@@ -806,8 +816,8 @@ class NewShipment extends Component {
             <Step
               key={item.key}
               title={`${item.title}`}
-              onClick={() => this.handleStepChange(item.key)}
-              // style={{ cursor: step === item.key ? 'default' : 'pointer' }}
+              //   onClick={() => this.handleStepChange(item.key)}
+              //   style={{ cursor: step === item.key ? 'default' : 'pointer' }}
             />
           ))}
         </Steps>
