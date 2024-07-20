@@ -15,8 +15,6 @@ import {
   Steps,
   Table,
 } from 'antd';
-// import { jsPDF } from "jspdf";
-// import 'jspdf-autotable';
 import { history } from 'libs/util';
 import React, { Component } from 'react';
 import customerService from 'services/Customer';
@@ -124,7 +122,7 @@ class NewShipment extends Component {
       .saveShipmentAndIVoice(values)
       .then((res) => {
         if (res.code != 200) {
-          message.error(`${res.msg}`); // 显示错误消息
+          message.error(`${res.msg}`);
           return;
         }
 
@@ -171,28 +169,28 @@ class NewShipment extends Component {
     }));
   };
 
-  handleCreateInvoice = () => {
-    showLoading();
-    // setTimeout(() => {
-    //   hideLoading();
-    //   this.generatePDF()
-    // }, 3000);
-    // return
+  handleCreateInvoice = (totalPCs, totalCartons, subTotal) => {
+    // showLoading();
     const { region, tableData } = this.state;
     const saveShipmentData = {
       Shipment: region.form1,
       Invoice: region.form1,
       Packings: tableData,
+      totalPCs: totalPCs,
+      totalCartons: totalCartons,
+      subTotal: subTotal,
     };
-    shipmentService
-      .createInvoice(saveShipmentData)
-      .then(() => {
-        message.success('Invoice created successfully!');
-        history.push('/shipment');
-      })
-      .catch((error) => {
-        console.error(error);
-      });
+
+    // shipmentService
+    //   .createInvoice(saveShipmentData)
+    //   .then(() => {
+    //     message.success('Invoice created successfully!');
+    //     history.push('/shipment');
+    //   })
+    //   .catch((error) => {
+    //     hideLoading();
+    //     console.error(error);
+    //   });
   };
 
   handleUploadChange = (info) => {
@@ -798,7 +796,11 @@ class NewShipment extends Component {
                 <Button
                   type="primary"
                   style={{ marginLeft: 8 }}
-                  onClick={this.handleCreateInvoice}
+                  onClick={this.handleCreateInvoice(
+                    totalPCs,
+                    totalCartons,
+                    subTotal
+                  )}
                 >
                   Create Invoice
                 </Button>
@@ -816,8 +818,8 @@ class NewShipment extends Component {
             <Step
               key={item.key}
               title={`${item.title}`}
-              //   onClick={() => this.handleStepChange(item.key)}
-              //   style={{ cursor: step === item.key ? 'default' : 'pointer' }}
+              onClick={() => this.handleStepChange(item.key)}
+              style={{ cursor: step === item.key ? 'default' : 'pointer' }}
             />
           ))}
         </Steps>
