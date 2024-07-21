@@ -25,7 +25,9 @@ import styles from './index.module.less';
 
 const { Step } = Steps;
 let idCounter = 0;
-
+let totalPCs = 0;
+let totalCartons = 0;
+let subTotal = 0;
 function generateUniqueId() {
   return idCounter++;
 }
@@ -45,6 +47,11 @@ class NewShipment extends Component {
       customerPos: {},
       csc: {},
       price: 0,
+      invoice: {
+        totalPCs: totalPCs,
+        totalCartons: totalCartons,
+        subTotal: subTotal,
+      },
     },
     region: {
       form1: {},
@@ -110,6 +117,12 @@ class NewShipment extends Component {
   };
 
   handleFormSubmit = (values) => {
+    const customerDueDate =
+      this.state.config.customerDueDateMap[values.customerCode];
+    console.log(customerDueDate);
+    values.billingContact = customerDueDate.billingContact;
+    values.shipTo = customerDueDate.shipTo;
+    values.term = customerDueDate.paymentTerm;
     this.setState({
       formData: values,
     });
@@ -169,28 +182,56 @@ class NewShipment extends Component {
     }));
   };
 
-  handleCreateInvoice = (totalPCs, totalCartons, subTotal) => {
-    // showLoading();
-    const { region, tableData } = this.state;
-    const saveShipmentData = {
-      Shipment: region.form1,
-      Invoice: region.form1,
-      Packings: tableData,
-      totalPCs: totalPCs,
-      totalCartons: totalCartons,
-      subTotal: subTotal,
-    };
+  //   handleCreateInvoice = () => {
+  //     showLoading();
+  //     const { tableData, formData } = this.state;
+  //     const saveShipmentData = {
+  //       shipment: formData,
+  //       packings: tableData,
+  //       invoice: {
+  //         totalPCs: totalPCs,
+  //         totalCartons: totalCartons,
+  //         subTotal: subTotal,
+  //       },
+  //     };
+  //     shipmentService
+  //       .createInvoice(saveShipmentData)
+  //       .then(() => {
+  //         message.success('Invoice created successfully!');
+  //         // history.push('/shipment');
+  //         hideLoading();
+  //       })
+  //       .catch((error) => {
+  //         hideLoading();
+  //         console.error(error);
+  //       });
+  //   };
 
-    // shipmentService
-    //   .createInvoice(saveShipmentData)
-    //   .then(() => {
-    //     message.success('Invoice created successfully!');
-    //     history.push('/shipment');
-    //   })
-    //   .catch((error) => {
-    //     hideLoading();
-    //     console.error(error);
-    //   });
+  handleCreateInvoice = () => {
+    showLoading();
+    const { tableData, formData } = this.state;
+    const saveShipmentData = {
+      shipment: formData,
+      packings: tableData,
+      invoice: {
+        totalPCs: totalPCs,
+        totalCartons: totalCartons,
+        subTotal: subTotal,
+      },
+    };
+    shipmentService
+      .createInvoice(saveShipmentData, { responseType: 'blob' }) // Ensure the response type is set to 'blob'
+      .then((response) => {
+        const file = new Blob([response.data], { type: 'application/pdf' });
+        const fileURL = URL.createObjectURL(file);
+        window.open(fileURL); // Open the PDF in a new tab
+        message.success('Invoice created successfully!');
+        hideLoading();
+      })
+      .catch((error) => {
+        hideLoading();
+        console.error(error);
+      });
   };
 
   handleUploadChange = (info) => {
@@ -209,39 +250,54 @@ class NewShipment extends Component {
     }
   };
 
-  calculateNewPrice = (po, style, color) => {
+  calculateProjectInfo = (po, style, color) => {
     const key = `${color}|${style}|${po}`;
     const value = this.state.config.csc[key];
     let salePrice = 0;
+    let styleName = '';
+    let fabrication = '';
+    let size = '';
     if (value) {
       salePrice = value.salePrice;
+      styleName = value.styleName;
+      fabrication = value.fabrication;
+      size = value.size;
       console.log(salePrice);
     } else {
       console.log('Key not found in csc', key);
     }
-    return salePrice;
+    return {
+      salePrice: salePrice,
+      styleName: styleName,
+      fabrication: fabrication,
+      size: size,
+    };
   };
 
   handleInputChange = (record, fieldName, value) => {
     const updatedTableData = this.state.tableData.map((item) => {
       if (item.id === record.id) {
         const newData = { ...item, [fieldName]: value };
+
         if (
           fieldName === 'customerPo' ||
           fieldName === 'styleCode' ||
           fieldName === 'color'
         ) {
-          newData.salePrice = this.calculateNewPrice(
+          const project = this.calculateProjectInfo(
             newData.customerPo,
             newData.styleCode,
             newData.color
           );
+          newData.salePrice = project.salePrice;
+          newData.styleName = project.styleName;
+          newData.fabrication = project.fabrication;
+          newData.size = project.size;
         }
         return newData;
       }
       return item;
     });
-
     this.setState({ tableData: updatedTableData });
   };
 
@@ -289,10 +345,10 @@ class NewShipment extends Component {
 
     let { formData } = this.state;
     let invoiceDt = formData.invoiceDt;
-
     if (formData.etdDt) {
       invoiceDt = formData.etdDt.add(customerDueDate.dueDateGap, 'days');
     }
+
     this.setState(
       {
         formData: {
@@ -305,6 +361,8 @@ class NewShipment extends Component {
         this.form1Ref.current?.setFieldsValue({
           invoiceDt: this.state.formData.invoiceDt,
         });
+        console.log(this.state.formData);
+        console.log(customerDueDate);
       }
     );
   };
@@ -727,6 +785,16 @@ class NewShipment extends Component {
                   type="primary"
                   style={{ marginLeft: 8 }}
                   onClick={() => {
+                    const customerPos = this.state.tableData
+                      .map((item) => item.customerPo)
+                      .join('/');
+
+                    this.setState((prevState) => ({
+                      formData: {
+                        ...prevState.formData,
+                        customerPos: customerPos,
+                      },
+                    }));
                     console.log(this.state.tableData);
                     this.handleStepChange(3);
                   }}
@@ -742,14 +810,15 @@ class NewShipment extends Component {
         key: 3,
         title: 'Review Shipment Summary & Invoice',
         content: () => {
-          let totalPCs = 0;
-          let totalCartons = 0;
-          let subTotal = 0;
+          totalPCs = 0;
+          totalCartons = 0;
+          subTotal = 0;
           this.state.tableData.forEach((item) => {
             totalPCs += item.cartonCnt;
             totalCartons += item.totalQuantity;
             subTotal += item.salePrice * item.totalQuantity;
           });
+
           console.log('render step 3', this.state.tableData);
           return (
             <div>
@@ -765,7 +834,7 @@ class NewShipment extends Component {
                     <p>Customer Code: {formData.customerCode}</p>
                   </Col>
                   <Col span={8}>
-                    <p>PO: {formData.customerCode}</p>
+                    <p>PO: {formData.customerPos}</p>
                   </Col>
                 </Row>
                 <Row gutter={16}>
@@ -796,11 +865,7 @@ class NewShipment extends Component {
                 <Button
                   type="primary"
                   style={{ marginLeft: 8 }}
-                  onClick={this.handleCreateInvoice(
-                    totalPCs,
-                    totalCartons,
-                    subTotal
-                  )}
+                  onClick={this.handleCreateInvoice}
                 >
                   Create Invoice
                 </Button>

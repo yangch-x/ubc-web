@@ -37,9 +37,6 @@ export default function Shipment() {
             total: res.data.total,
             pageNo: res.data.pageNo,
             pageSize: res.data.pageSize,
-          }).catch((error) => {
-            setLoading(false);
-            console.error(error);
           });
           setTableData(res.data.res);
           setSelection([]);

@@ -13,7 +13,7 @@ class ShipmentService {
 
   //create invocei
   createInvoice(params) {
-    return Http.post(`shipment/createInvoice`, params);
+    return Http.post(`/shipment/createInvoice`, params);
   }
 
   //save shipment and ivoice
