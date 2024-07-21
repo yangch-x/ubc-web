@@ -25,7 +25,7 @@ export default function Shipment() {
 
   const [searchParams, setSearchParams] = useState({
     pageNo: 1,
-    pageSize: 15,
+    pageSize: 10,
   });
   // 格式化日期字段的函数
   const formatDate = (dateString) => {

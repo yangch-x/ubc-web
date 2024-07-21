@@ -15,7 +15,7 @@ import styles from './index.module.less';
 export default function Shipment() {
   const [searchParams, setSearchParams] = useState({
     pageNo: 1,
-    pageSize: 15,
+    pageSize: 10,
   });
 
   const [tableData, setTableData] = useState([]);

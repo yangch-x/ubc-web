@@ -25,7 +25,7 @@ export default function Shipment() {
 
   const [searchParams, setSearchParams] = useState({
     pageNo: 1,
-    pageSize: 15,
+    pageSize: 10,
   });
   // 格式化日期字段的函数
   const formatDate = (dateString) => {
@@ -56,12 +56,8 @@ export default function Shipment() {
           total: res.data.total,
           pageNo: res.data.pageNo,
           pageSize: res.data.pageSize,
-        }).catch((error) => {
-          setLoading(false);
-          console.error(error);
         });
-        const transformedData = transformData(res.data.res);
-        setTableData([...tableData, ...transformedData]);
+        setTableData(res.data.res);
         setSelection([]);
       })
       .catch((error) => {
@@ -103,9 +99,15 @@ export default function Shipment() {
         set(getDialogForm(params.row))
       );
     } else if (params.prop === 'pdel' && params.type === 'confirm') {
+      const { projID } = params.row;
+
       projectionService
-        .remove(params.row)
+        .remove({ projID })
         .then((res) => {
+          if (res.code != 200) {
+            message.error(`${res.msg}`); // 显示错误消息
+            return;
+          }
           message.success('删除成功！');
           loadData();
         })
@@ -130,7 +132,7 @@ export default function Shipment() {
         onSubmit={(data) => {
           Dialog.loading('fdialog');
           projectionService
-            .update(data)
+            .saveOrUpdate(data)
             .then((res) => {
               //也可以根据是否有 id 不同提示
               message.success('操作成功！');

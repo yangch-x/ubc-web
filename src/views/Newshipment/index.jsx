@@ -182,30 +182,30 @@ class NewShipment extends Component {
     }));
   };
 
-  //   handleCreateInvoice = () => {
-  //     showLoading();
-  //     const { tableData, formData } = this.state;
-  //     const saveShipmentData = {
-  //       shipment: formData,
-  //       packings: tableData,
-  //       invoice: {
-  //         totalPCs: totalPCs,
-  //         totalCartons: totalCartons,
-  //         subTotal: subTotal,
-  //       },
-  //     };
-  //     shipmentService
-  //       .createInvoice(saveShipmentData)
-  //       .then(() => {
-  //         message.success('Invoice created successfully!');
-  //         // history.push('/shipment');
-  //         hideLoading();
-  //       })
-  //       .catch((error) => {
-  //         hideLoading();
-  //         console.error(error);
-  //       });
+  // handleCreateInvoice = () => {
+  //   showLoading();
+  //   const { tableData, formData } = this.state;
+  //   const saveShipmentData = {
+  //     shipment: formData,
+  //     packings: tableData,
+  //     invoice: {
+  //       totalPCs: totalPCs,
+  //       totalCartons: totalCartons,
+  //       subTotal: subTotal,
+  //     },
   //   };
+  //   shipmentService
+  //     .createInvoice(saveShipmentData)
+  //     .then(() => {
+  //       message.success('Invoice created successfully!');
+  //       // history.push('/shipment');
+  //       hideLoading();
+  //     })
+  //     .catch((error) => {
+  //       hideLoading();
+  //       console.error(error);
+  //     });
+  // };
 
   handleCreateInvoice = () => {
     showLoading();
@@ -220,11 +220,18 @@ class NewShipment extends Component {
       },
     };
     shipmentService
-      .createInvoice(saveShipmentData, { responseType: 'blob' }) // Ensure the response type is set to 'blob'
+      .createInvoice(saveShipmentData, { responseType: 'blob' })
       .then((response) => {
-        const file = new Blob([response.data], { type: 'application/pdf' });
-        const fileURL = URL.createObjectURL(file);
-        window.open(fileURL); // Open the PDF in a new tab
+        const blob = new Blob([response], { type: 'application/pdf' });
+        const url = window.URL.createObjectURL(blob);
+
+        const newWindow = window.open(url);
+        if (newWindow) {
+          newWindow.focus();
+        } else {
+          message.error('Please allow popups for this website');
+        }
+
         message.success('Invoice created successfully!');
         hideLoading();
       })
