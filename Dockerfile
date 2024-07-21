@@ -1,10 +1,10 @@
 # 使用最新版的 Node 镜像作为基础镜像。
-FROM node:21-alpine as node
+FROM node:latest as node
+
 # 创建工作目录并将本地项目复制到工作目录。
 WORKDIR /app
 COPY . .
 
-RUN yarn config set registry https://registry.npm.taobao.org
 # 安装项目所需的依赖项。
 RUN yarn install
 
