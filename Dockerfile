@@ -15,7 +15,7 @@ RUN yarn build
 FROM nginx:latest
 
 # 将构建生成的静态文件复制到 Nginx 容器的 HTML 目录
-COPY --from=node /app/dist/ /usr/share/nginx/html
+COPY --from=node /app/build/ /usr/share/nginx/html
 # 将自定义 Nginx 配置文件复制到 Nginx 容器的配置目录
 COPY --from=node /app/nginx.conf /etc/nginx/conf.d/default.conf
 
