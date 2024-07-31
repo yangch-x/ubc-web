@@ -14,6 +14,7 @@ const routes = [
     path: '/customer',
     component: () => import('views/Customer'),
   },
+
   {
     label: 'Invoice',
     hidden: true,
@@ -23,7 +24,7 @@ const routes = [
   {
     label: '新出运',
     hidden: true,
-    path: '/newshpiment',
+    path: '/newshipment',
     component: () => import('views/Newshipment'),
   },
 ];

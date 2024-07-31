@@ -6,35 +6,14 @@ import {
 import { Search, Region, Table, Dialog, Form } from 'freedomen';
 import { useState, useCallback, useEffect } from 'react';
 import { message, Modal } from 'antd';
-import { history } from 'libs/util';
 import projectionService from 'services/Projection';
 import styles from './index.module.less';
 import * as systemConfig from 'systemConfig';
 export default function Shipment() {
-  // 定义转换数据的函数
-  function transformData(data) {
-    return data.map((item) => {
-      return {
-        ...item,
-        packDt: formatDate(item.packDt),
-        shipDt: formatDate(item.shipDt),
-        arriveDt: formatDate(item.arriveDt),
-      };
-    });
-  }
-
   const [searchParams, setSearchParams] = useState({
     pageNo: 1,
     pageSize: 10,
   });
-  // 格式化日期字段的函数
-  const formatDate = (dateString) => {
-    const date = new Date(dateString);
-    const year = date.getFullYear();
-    const month = String(date.getMonth() + 1).padStart(2, '0'); // 月份从0开始，所以要加1
-    const day = String(date.getDate()).padStart(2, '0');
-    return `${year}-${month}-${day}`;
-  };
 
   const [tableData, setTableData] = useState([]);
   const [selection, setSelection] = useState([]);
@@ -65,9 +44,7 @@ export default function Shipment() {
         console.error(error);
       });
   }, [searchParams]);
-  const setReSearch = useCallback((row) => {
-    setSearchParams({ ...row, pageNo: 1 });
-  }, []);
+
   const searchEvent = (params) => {
     if (params.prop === 'search' && params.type === 'click') {
       setSearchParams(params.row);
@@ -104,7 +81,7 @@ export default function Shipment() {
       projectionService
         .remove({ projID })
         .then((res) => {
-          if (res.code != 200) {
+          if (res.code !== 200) {
             message.error(`${res.msg}`); // 显示错误消息
             return;
           }
@@ -147,13 +124,13 @@ export default function Shipment() {
         columns={[
           {
             type: 'input@w200',
-            prop: 'exFtyInHouse',
+            prop: 'arriveDt',
             label: 'Ex-FTY/In House',
             disabled: ({ value, data }) => {},
           },
           {
             type: 'input@w200',
-            prop: 'customer',
+            prop: 'customerCode',
             label: 'CUSTOMER',
             config: { allowClear: true },
           },
@@ -163,29 +140,69 @@ export default function Shipment() {
             label: 'CUSTOMER P.O.',
             config: { allowClear: false },
           },
-          { type: 'input@w200', prop: 'styleNo', label: 'STYLE NO' },
           {
             type: 'input@w200',
-            prop: 'descStyleName',
+            prop: 'styleCode',
+            label: 'STYLE NO',
+          },
+          {
+            type: 'input@w200',
+            prop: 'styleName',
             label: 'DESC/STYLE NAME',
           },
-          { type: 'input@w200', prop: 'color', label: 'COLOR' },
-          { type: 'input@w200', prop: 'fabrication', label: 'FABRICATION' },
-          { type: 'input@w200', prop: 'qtyPc', label: 'QTY/PC' },
-          { type: 'input@w200', prop: 'buy', label: 'BUY' },
-          { type: 'input@w200', prop: 'ttlBuy', label: 'TTL BUY' },
-          { type: 'input@w200', prop: 'sell', label: 'SELL' },
-          { type: 'input@w200', prop: 'ttlSell', label: 'TTL SELL' },
-          { type: 'input@w200', prop: 'vendor', label: 'VENDOR' },
+          {
+            type: 'input@w200',
+            prop: 'color',
+            label: 'COLOR',
+          },
+          {
+            type: 'input@w200',
+            prop: 'fabrication',
+            label: 'FABRICATION',
+          },
+          {
+            type: 'input@w200',
+            prop: 'poQty',
+            label: 'QTY/PC',
+          },
+          {
+            type: 'input@w200',
+            prop: 'costPrice',
+            label: '￥ BUY',
+          },
+          {
+            type: 'input@w200',
+            prop: 'ttlBuy',
+            label: 'TTL BUY',
+          },
+          {
+            type: 'input@w200',
+            prop: 'salePrice',
+            label: '$ SELL',
+          },
+          {
+            type: 'input@w200',
+            prop: 'ttlSell',
+            label: 'TTL SELL',
+          },
+          {
+            type: 'input@w200',
+            prop: 'exporter',
+            label: 'VENDOR',
+          },
           {
             type: 'input@w200',
             prop: 'waterResistant',
             label: 'WATER RESISTANT / Y/N',
           },
-          { type: 'input@w200', prop: 'note', label: 'NOTE' },
           {
             type: 'input@w200',
-            prop: 'countryBrandId',
+            prop: 'notes',
+            label: 'NOTE',
+          },
+          {
+            type: 'input@w200',
+            prop: 'country',
             label: 'Country&Brand ID',
           },
         ]}
@@ -224,8 +241,6 @@ export default function Shipment() {
               type: 'upload-primary',
               prop: 'upload',
               config: {
-                // filetypes: ['pdf'],
-                // fileexts: ['pdf'],
                 action: `${systemConfig.baseURL}/common/upload?usedFor=projection`,
                 onSuccess: (res) => {
                   if (res.code === 200) {
@@ -300,7 +315,7 @@ export default function Shipment() {
           {
             type: 'text',
             prop: 'costPrice',
-            label: 'BUY',
+            label: '￥ BUY',
           },
           {
             type: 'text',
@@ -310,7 +325,7 @@ export default function Shipment() {
           {
             type: 'text',
             prop: 'salePrice',
-            label: 'SELL',
+            label: '$ SELL',
           },
           {
             type: 'text',

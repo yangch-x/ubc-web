@@ -57,7 +57,7 @@ export default function Shipment() {
   };
   const regionEvent = (params) => {
     if (params.prop === 'add' && params.type === 'click') {
-      history.push('/newshpiment');
+      history.push('/newshipment');
     } else if (params.prop === 'dels' && params.type === 'click') {
       Modal.confirm({
         content: '确定要删除选中的' + selection.length + '条数据？',
@@ -76,6 +76,9 @@ export default function Shipment() {
       Dialog.open('fdialog', '编辑').then((set) =>
         set(getDialogForm(params.row))
       );
+    } else if (params.prop === 'packing' && params.type === 'click') {
+      const { shipId } = params.row;
+      history.push(`/newshipment?shipId=${shipId}`);
     } else if (params.prop === 'pdel' && params.type === 'confirm') {
       const { shipId } = params.row;
       console.log(shipId);
@@ -399,6 +402,12 @@ export default function Shipment() {
                   prop: 'edit',
                   value: '编辑',
                   className: styles['edit'],
+                },
+                {
+                  type: 'button-link',
+                  prop: 'packing',
+                  value: 'packing',
+                  className: styles['e	dit'],
                 },
                 [
                   {

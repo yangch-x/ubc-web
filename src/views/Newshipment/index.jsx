@@ -1,4 +1,7 @@
 import { PlusOutlined, UploadOutlined } from '@ant-design/icons';
+import { baseURL } from 'systemConfig';
+
+import axios from 'axios'; // 引入原生的axios,不作封装处理
 import {
   Button,
   Col,
@@ -15,13 +18,16 @@ import {
   Steps,
   Table,
 } from 'antd';
+import moment from 'moment';
 import { history } from 'libs/util';
 import React, { Component } from 'react';
 import customerService from 'services/Customer';
 import shipmentService from 'services/Shipment';
+import packingService from 'services/Packing';
 import FileUpload from 'views/Components/FileUpload';
 import { hideLoading, showLoading } from 'views/Components/Loading';
 import styles from './index.module.less';
+import * as util from 'libs/util';
 
 const { Step } = Steps;
 let idCounter = 0;
@@ -31,7 +37,41 @@ let subTotal = 0;
 function generateUniqueId() {
   return idCounter++;
 }
+const createInvoice = async (saveShipmentData) => {
+  try {
+    // 显示加载
+    showLoading();
 
+    const response = await axios.post(
+      `${baseURL}/shipment/createInvoice`,
+      saveShipmentData,
+      {
+        responseType: 'arraybuffer',
+        headers: {
+          Authorization: `Bearer ${util.getToken()}`,
+        },
+      }
+    );
+
+    // 隐藏加载
+    hideLoading();
+
+    // 显示成功消息
+    message.success('Invoice created successfully!');
+
+    // 转换pdf
+    const blob = new Blob([response.data], { type: 'application/pdf' });
+    const url = window.URL.createObjectURL(blob);
+    window.open(url);
+    history.push('/shipment');
+  } catch (error) {
+    // 隐藏加载
+    hideLoading();
+
+    // 处理错误
+    console.error(error);
+  }
+};
 class NewShipment extends Component {
   state = {
     step: 1,
@@ -67,6 +107,10 @@ class NewShipment extends Component {
     customerService
       .searchAll()
       .then((res) => {
+        if (res.code !== 200) {
+          message.error(`${res.msg}`);
+          return;
+        }
         const options = res.data.customers.map((customer) => ({
           value: customer.customerCode,
           label: customer.customerCode,
@@ -110,19 +154,71 @@ class NewShipment extends Component {
       .catch((error) => {
         console.error(error);
       });
+
+    const params = new URLSearchParams(this.props.location.search);
+    const shipId = params.get('shipId');
+    if (shipId !== null) {
+      this.handleStepChange(2);
+      showLoading();
+      // 查询packing
+      const p = { shipId: shipId };
+      packingService
+        .searchPacking(p)
+        .then((res) => {
+          if (res.code !== 200) {
+            message.error(`${res.msg}`);
+            return;
+          }
+          hideLoading();
+          if (res.data.packings === null) {
+            res.data.packings = [];
+          }
+          const etdDtFormatted = moment(res.data.shipment.shipDt, 'YYYY-MM-DD');
+          const invoiceDtFormatted = moment(
+            res.data.shipment.invoiceDt,
+            'YYYY-MM-DD'
+          );
+          const invoiceDueFormatted = moment(
+            res.data.shipment.invoiceDue,
+            'YYYY-MM-DD'
+          );
+
+          res.data.shipment.etdDt = etdDtFormatted;
+          res.data.shipment.invoiceDt = invoiceDtFormatted;
+          res.data.shipment.invoiceDue = invoiceDueFormatted;
+          this.setState((prevState) => ({
+            formData: res.data.shipment,
+            tableData: res.data.packings,
+            region: {
+              ...prevState.region,
+              common: {
+                ...prevState.region.common,
+                invoiceId: res.data.shipment.invoiceId,
+                shipmentId: res.data.shipment.shipId,
+              },
+            },
+          }));
+        })
+        .catch((error) => {
+          console.error(error);
+        });
+    }
   }
 
   handleStepChange = (currentStep) => {
+    console.log(this.setState.config);
     this.setState({ step: currentStep });
   };
 
   handleFormSubmit = (values) => {
+    showLoading();
     const customerDueDate =
       this.state.config.customerDueDateMap[values.customerCode];
     console.log(customerDueDate);
     values.billingContact = customerDueDate.billingContact;
     values.shipTo = customerDueDate.shipTo;
     values.term = customerDueDate.paymentTerm;
+
     this.setState({
       formData: values,
     });
@@ -130,15 +226,14 @@ class NewShipment extends Component {
     const { region, step } = this.state;
     values.invoiceId = region.common.invoiceId;
     values.shipmentId = region.common.shipmentId;
-
     shipmentService
       .saveShipmentAndIVoice(values)
       .then((res) => {
-        if (res.code != 200) {
+        if (res.code !== 200) {
           message.error(`${res.msg}`);
           return;
         }
-
+        hideLoading();
         this.setState({
           region: {
             ...this.state.region,
@@ -182,31 +277,6 @@ class NewShipment extends Component {
     }));
   };
 
-  // handleCreateInvoice = () => {
-  //   showLoading();
-  //   const { tableData, formData } = this.state;
-  //   const saveShipmentData = {
-  //     shipment: formData,
-  //     packings: tableData,
-  //     invoice: {
-  //       totalPCs: totalPCs,
-  //       totalCartons: totalCartons,
-  //       subTotal: subTotal,
-  //     },
-  //   };
-  //   shipmentService
-  //     .createInvoice(saveShipmentData)
-  //     .then(() => {
-  //       message.success('Invoice created successfully!');
-  //       // history.push('/shipment');
-  //       hideLoading();
-  //     })
-  //     .catch((error) => {
-  //       hideLoading();
-  //       console.error(error);
-  //     });
-  // };
-
   handleCreateInvoice = () => {
     showLoading();
     const { tableData, formData } = this.state;
@@ -219,26 +289,23 @@ class NewShipment extends Component {
         subTotal: subTotal,
       },
     };
-    shipmentService
-      .createInvoice(saveShipmentData, { responseType: 'blob' })
-      .then((response) => {
-        const blob = new Blob([response], { type: 'application/pdf' });
-        const url = window.URL.createObjectURL(blob);
 
-        const newWindow = window.open(url);
-        if (newWindow) {
-          newWindow.focus();
-        } else {
-          message.error('Please allow popups for this website');
-        }
+    createInvoice(saveShipmentData);
+    // shipmentService
+    //   .createInvoice(saveShipmentData, { responseType: 'arraybuffer' })
+    //   .then((response) => {
+    //     message.success('Invoice created successfully!');
+    //     hideLoading();
 
-        message.success('Invoice created successfully!');
-        hideLoading();
-      })
-      .catch((error) => {
-        hideLoading();
-        console.error(error);
-      });
+    //     // 转换pdf
+    //     const blob = new Blob([response], { type: 'application/pdf' });
+    //     const url = window.URL.createObjectURL(blob);
+    //     window.open(url);
+    //   })
+    //   .catch((error) => {
+    //     hideLoading();
+    //     console.error(error);
+    //   });
   };
 
   handleUploadChange = (info) => {
@@ -262,14 +329,15 @@ class NewShipment extends Component {
     const value = this.state.config.csc[key];
     let salePrice = 0;
     let styleName = '';
-    let fabrication = '';
+    let projId = '';
+    let fabrication = 0;
     let size = '';
     if (value) {
       salePrice = value.salePrice;
       styleName = value.styleName;
       fabrication = value.fabrication;
+      projId = value.projID;
       size = value.size;
-      console.log(salePrice);
     } else {
       console.log('Key not found in csc', key);
     }
@@ -278,6 +346,7 @@ class NewShipment extends Component {
       styleName: styleName,
       fabrication: fabrication,
       size: size,
+      projId: projId,
     };
   };
 
@@ -300,6 +369,7 @@ class NewShipment extends Component {
           newData.styleName = project.styleName;
           newData.fabrication = project.fabrication;
           newData.size = project.size;
+          newData.projId = project.projId;
         }
         return newData;
       }
@@ -455,12 +525,12 @@ class NewShipment extends Component {
                   <Form.Item
                     label="Vessel/Flight"
                     name="vesselFlight"
-                    rules={[
-                      {
-                        required: true,
-                        message: 'Vessel/Flight is required',
-                      },
-                    ]}
+                    // rules={[
+                    //   {
+                    //     required: true,
+                    //     message: 'Vessel/Flight is required',
+                    //   },
+                    // ]}
                   >
                     <Input />
                   </Form.Item>
@@ -555,12 +625,6 @@ class NewShipment extends Component {
                     label="Additional Cost"
                     name="additionalCost"
                     initialValue={0.0}
-                    rules={[
-                      {
-                        required: true,
-                        message: 'Additional Cost is required',
-                      },
-                    ]}
                   >
                     <InputNumber />
                   </Form.Item>
@@ -761,7 +825,6 @@ class NewShipment extends Component {
                     key: 'action',
                     render: (text, record) => (
                       <Space size="middle">
-                        <Button type="link">编辑</Button>
                         <Popconfirm
                           title="确定要删除选中数据吗？"
                           onConfirm={() => this.handleDeleteRow(record.id)}
@@ -792,6 +855,10 @@ class NewShipment extends Component {
                   type="primary"
                   style={{ marginLeft: 8 }}
                   onClick={() => {
+                    if (this.state.tableData.length === 0) {
+                      message.error('packing data cannot be empty.');
+                      return;
+                    }
                     const customerPos = this.state.tableData
                       .map((item) => item.customerPo)
                       .join('/');
@@ -802,8 +869,28 @@ class NewShipment extends Component {
                         customerPos: customerPos,
                       },
                     }));
-                    console.log(this.state.tableData);
-                    this.handleStepChange(3);
+
+                    // 保存packing
+                    const createPackings = {
+                      createPackings: this.state.tableData,
+                      shipId: this.state.region.common.shipmentId,
+                    };
+                    packingService
+                      .savePacking(createPackings)
+                      .then((res) => {
+                        if (res.code !== 200) {
+                          message.error(`${res.msg}`);
+                          return;
+                        }
+                        message.success('packing save successfully!');
+                        // history.push('/shipment');
+                        hideLoading();
+                        this.handleStepChange(3);
+                      })
+                      .catch((error) => {
+                        hideLoading();
+                        console.error(error);
+                      });
                   }}
                 >
                   Next
@@ -821,8 +908,8 @@ class NewShipment extends Component {
           totalCartons = 0;
           subTotal = 0;
           this.state.tableData.forEach((item) => {
-            totalPCs += item.cartonCnt;
-            totalCartons += item.totalQuantity;
+            totalPCs += item.totalQuantity;
+            totalCartons += item.cartonCnt;
             subTotal += item.salePrice * item.totalQuantity;
           });
 
