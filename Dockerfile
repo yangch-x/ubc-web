@@ -9,7 +9,7 @@ COPY . .
 RUN yarn install
 
 # 执行构建过程，生成静态文件
-RUN yarn build-only
+RUN yarn build
 
 # 使用最新版的 Nginx 作为基础镜像
 FROM nginx:latest
