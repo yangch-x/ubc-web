@@ -212,6 +212,23 @@ class NewShipment extends Component {
   };
 
   handleFormSubmit = (values) => {
+    const additionalCost = values.additionalCost;
+    const additionalCostDescription = values.additionalCostDescription;
+
+    if (
+      additionalCost !== undefined &&
+      additionalCost !== 0 &&
+      !additionalCostDescription
+    ) {
+      message.error('附加费用描述信息未填写');
+      return;
+    }
+
+    if (!additionalCost && additionalCostDescription) {
+      message.error('附加费用未填写');
+      return;
+    }
+
     showLoading();
     const customerDueDate =
       this.state.config.customerDueDateMap[values.customerCode];
@@ -232,6 +249,7 @@ class NewShipment extends Component {
       .then((res) => {
         if (res.code !== 200) {
           message.error(`${res.msg}`);
+          hideLoading();
           return;
         }
         hideLoading();
@@ -630,6 +648,17 @@ class NewShipment extends Component {
                     <InputNumber />
                   </Form.Item>
                 </Col>
+
+                <Col span={8}>
+                  <Form.Item
+                    label="Additional Cost Description"
+                    name="additionalCostDescription"
+                  >
+                    <Input />
+                  </Form.Item>
+                </Col>
+              </Row>
+              <Row gutter={24}>
                 <Col span={8}>
                   <Form.Item
                     label="Deposit Amt"
@@ -645,8 +674,6 @@ class NewShipment extends Component {
                     <InputNumber />
                   </Form.Item>
                 </Col>
-              </Row>
-              <Row gutter={16}>
                 <Col span={8}>
                   <Form.Item
                     label="Invoice Dt"
@@ -881,6 +908,7 @@ class NewShipment extends Component {
                       .then((res) => {
                         if (res.code !== 200) {
                           message.error(`${res.msg}`);
+                          hideLoading();
                           return;
                         }
                         message.success('packing save successfully!');
@@ -913,7 +941,7 @@ class NewShipment extends Component {
             totalCartons += item.cartonCnt;
             subTotal += item.salePrice * item.totalQuantity;
           });
-
+          subTotal += formData.additionalCost;
           console.log('render step 3', this.state.tableData);
           return (
             <div>

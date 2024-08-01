@@ -161,27 +161,27 @@ export default function Shipment() {
             label: 'FABRICATION',
           },
           {
-            type: 'input@w200',
+            type: 'inputnumber@w200',
             prop: 'poQty',
             label: 'QTY/PC',
           },
           {
-            type: 'input@w200',
+            type: 'inputnumber@w200',
             prop: 'costPrice',
             label: '￥ BUY',
           },
           {
-            type: 'input@w200',
+            type: 'inputnumber@w200',
             prop: 'ttlBuy',
             label: 'TTL BUY',
           },
           {
-            type: 'input@w200',
+            type: 'inputnumber@w200',
             prop: 'salePrice',
             label: '$ SELL',
           },
           {
-            type: 'input@w200',
+            type: 'inputnumber@w200',
             prop: 'ttlSell',
             label: 'TTL SELL',
           },
