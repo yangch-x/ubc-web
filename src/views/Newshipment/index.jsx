@@ -167,6 +167,7 @@ class NewShipment extends Component {
         .then((res) => {
           if (res.code !== 200) {
             message.error(`${res.msg}`);
+            hideLoading();
             return;
           }
           hideLoading();
