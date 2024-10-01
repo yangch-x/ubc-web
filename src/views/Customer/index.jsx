@@ -223,6 +223,11 @@ export default function Shipment() {
             prop: 'status',
             label: 'Status',
           },
+          {
+            type: 'inputnumber',
+            prop: 'dueDateGap',
+            label: 'DueDateGap',
+          },
         ]}
       />
     );
@@ -236,7 +241,7 @@ export default function Shipment() {
         className={'f-search'}
         onEvent={searchEvent}
         columns={[
-          { type: 'input', prop: 'searchParams', label: '' },
+          { type: 'input', prop: 'searchParams', label: '', placeholder: 'Customer Name' },
           {
             type: 'button-primary',
             prop: 'search',

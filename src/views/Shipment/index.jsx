@@ -211,7 +211,7 @@ export default function Shipment() {
         className={'f-search'}
         onEvent={searchEvent}
         columns={[
-          { type: 'input', prop: 'searchParams', label: '' },
+          { type: 'input', prop: 'searchParams', label: '', placeholder: 'Invoice Code'},
           {
             type: 'button-primary',
             prop: 'search',
@@ -281,6 +281,48 @@ export default function Shipment() {
           },
           {
             type: 'text',
+            prop: 'invoiceCode',
+            label: (
+                <div
+                    className="sort-container"
+                    onClick={() => handleSort('invoiceCode')}
+                >
+                  invoiceCode {getSortIcon('invoiceCode')}
+                </div>
+            ),
+            sorter: true,
+            value: '-',
+          },
+          {
+            type: 'text',
+            prop: 'subTotal',
+            label: (
+                <div
+                    className="sort-container"
+                    onClick={() => handleSort('subTotal')}
+                >
+                  subTotal {getSortIcon('subTotal')}
+                </div>
+            ),
+            sorter: true,
+            value: '0',
+          },
+          {
+            type: 'text',
+            prop: 'totalPCs',
+            label: (
+                <div
+                    className="sort-container"
+                    onClick={() => handleSort('totalPCs')}
+                >
+                  totalPCs {getSortIcon('totalPCs')}
+                </div>
+            ),
+            sorter: true,
+            value: '0',
+          },
+          {
+            type: 'text',
             prop: 'cartonCnt',
             label: (
               <div
@@ -288,34 +330,6 @@ export default function Shipment() {
                 onClick={() => handleSort('cartonCnt')}
               >
                 Carton Cnt {getSortIcon('cartonCnt')}
-              </div>
-            ),
-            sorter: true,
-            value: 'text',
-          },
-          {
-            type: 'text',
-            prop: 'cartonSize',
-            label: (
-              <div
-                className="sort-container"
-                onClick={() => handleSort('cartonSize')}
-              >
-                Total Volume {getSortIcon('cartonSize')}
-              </div>
-            ),
-            sorter: true,
-            value: 'text',
-          },
-          {
-            type: 'text',
-            prop: 'grossWeight',
-            label: (
-              <div
-                className="sort-container"
-                onClick={() => handleSort('grossWeight')}
-              >
-                Total Weight {getSortIcon('grossWeight')}
               </div>
             ),
             sorter: true,

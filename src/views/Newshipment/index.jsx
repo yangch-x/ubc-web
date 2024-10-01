@@ -63,7 +63,7 @@ const createInvoice = async (saveShipmentData) => {
     const blob = new Blob([response.data], { type: 'application/pdf' });
     const url = window.URL.createObjectURL(blob);
     window.open(url);
-    history.push('/shipment');
+    // history.push('/shipment');
   } catch (error) {
     // 隐藏加载
     hideLoading();
@@ -303,6 +303,7 @@ class NewShipment extends Component {
       shipment: formData,
       packings: tableData,
       invoice: {
+        invoiceCode:formData.invoiceCode,
         totalPCs: totalPCs,
         totalCartons: totalCartons,
         subTotal: subTotal,
@@ -332,8 +333,25 @@ class NewShipment extends Component {
       const response = info.file.response;
 
       if (response.code === 200) {
+        const data = response.data.res;
+        data.forEach((item) => {
+          const po = item.customerPo;
+          const style = item.styleCode;
+          const color = item.color;
+
+          const project = this.calculateProjectInfo(po, style, color);
+          console.log(project)
+          item.salePrice = project.salePrice;
+          item.styleName = project.styleName;
+          item.fabrication = project.fabrication;
+          item.size = project.size;
+          item.projId = project.projId;
+        });
+
+        console.log(data);
+
         this.setState(() => ({
-          tableData: response.data.res,
+          tableData: data,
         }));
       } else {
         message.error(`Error: ${response.msg}`);
@@ -344,6 +362,7 @@ class NewShipment extends Component {
   };
 
   calculateProjectInfo = (po, style, color) => {
+    console.log(po, style, color)
     const key = `${color}|${style}|${po}`;
     const value = this.state.config.csc[key];
     let salePrice = 0;
@@ -413,23 +432,25 @@ class NewShipment extends Component {
 
     let { formData } = this.state;
     let invoiceDt = formData.invoiceDt;
+    let invoiceDue = formData.invoiceDue;
 
     if (formData.customerCode && date) {
       const gap =
         this.state.config.customerDueDateMap[formData.customerCode].dueDateGap;
       invoiceDt = date.add(gap, 'days');
+      invoiceDue = date.add(gap, 'days');
     }
     this.setState(
       {
         formData: {
           ...formData,
           etdDt: date,
-          invoiceDt,
+          invoiceDue,
         },
       },
       () => {
         this.form1Ref.current?.setFieldsValue({
-          invoiceDt: this.state.formData.invoiceDt,
+          invoiceDue: this.state.formData.invoiceDue,
         });
       }
     );
@@ -441,8 +462,10 @@ class NewShipment extends Component {
 
     let { formData } = this.state;
     let invoiceDt = formData.invoiceDt;
+    let invoiceDue = formData.invoiceDue;
     if (formData.etdDt) {
       invoiceDt = formData.etdDt.add(customerDueDate.dueDateGap, 'days');
+      invoiceDue = formData.etdDt.add(customerDueDate.dueDateGap, 'days');
     }
 
     this.setState(
@@ -450,18 +473,19 @@ class NewShipment extends Component {
         formData: {
           ...formData,
           customerCode: value,
-          invoiceDt,
+          invoiceDue
         },
       },
       () => {
         this.form1Ref.current?.setFieldsValue({
-          invoiceDt: this.state.formData.invoiceDt,
+          invoiceDue: this.state.formData.invoiceDue,
         });
         console.log(this.state.formData);
         console.log(customerDueDate);
       }
     );
   };
+
 
   render() {
     const { step, formData, tableData, config } = this.state;

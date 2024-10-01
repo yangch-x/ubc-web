@@ -218,7 +218,7 @@ export default function Shipment() {
         className={'f-search'}
         onEvent={searchEvent}
         columns={[
-          { type: 'input', prop: 'searchParams', label: '' },
+          { type: 'input', prop: 'searchParams', label: '', placeholder: 'Customer Code&Po' },
           {
             type: 'button-primary',
             prop: 'search',
