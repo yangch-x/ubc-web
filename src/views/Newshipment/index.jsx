@@ -237,6 +237,7 @@ class NewShipment extends Component {
     values.shipTo = customerDueDate.shipTo;
     values.term = customerDueDate.paymentTerm;
 
+    values.depositAmt = 0-values.depositAmt
     this.setState({
       formData: values,
     });
@@ -668,6 +669,13 @@ class NewShipment extends Component {
                     label="Additional Cost"
                     name="additionalCost"
                     initialValue={0.0}
+                    rules={[
+                      {
+                        type: 'number',
+                        min: 0.00,
+                        message: 'Additional Cost must be greater than 0',
+                      },
+                    ]}
                   >
                     <InputNumber />
                   </Form.Item>
@@ -693,7 +701,13 @@ class NewShipment extends Component {
                         required: true,
                         message: 'Deposit Amt is required',
                       },
+                      {
+                        type: 'number',
+                        min: 0.01,
+                        message: 'Deposit Amt must be greater than 0',
+                      },
                     ]}
+
                   >
                     <InputNumber />
                   </Form.Item>
