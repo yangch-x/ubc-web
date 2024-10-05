@@ -307,7 +307,7 @@ class NewShipment extends Component {
         invoiceCode: formData.invoiceCode,
         totalPCs: totalPCs,
         totalCartons: totalCartons,
-        subTotal: subTotal.toFixed(2),
+        subTotal:  parseFloat(subTotal.toFixed(2)),
       },
     };
 
