@@ -237,7 +237,7 @@ class NewShipment extends Component {
     values.shipTo = customerDueDate.shipTo;
     values.term = customerDueDate.paymentTerm;
 
-    values.depositAmt = 0-values.depositAmt
+    values.depositAmt = 0 - values.depositAmt;
     this.setState({
       formData: values,
     });
@@ -304,7 +304,7 @@ class NewShipment extends Component {
       shipment: formData,
       packings: tableData,
       invoice: {
-        invoiceCode:formData.invoiceCode,
+        invoiceCode: formData.invoiceCode,
         totalPCs: totalPCs,
         totalCartons: totalCartons,
         subTotal: subTotal,
@@ -341,7 +341,7 @@ class NewShipment extends Component {
           const color = item.color;
 
           const project = this.calculateProjectInfo(po, style, color);
-          console.log(project)
+          console.log(project);
           item.salePrice = project.salePrice;
           item.styleName = project.styleName;
           item.fabrication = project.fabrication;
@@ -363,7 +363,7 @@ class NewShipment extends Component {
   };
 
   calculateProjectInfo = (po, style, color) => {
-    console.log(po, style, color)
+    console.log(po, style, color);
     const key = `${color}|${style}|${po}`;
     const value = this.state.config.csc[key];
     let salePrice = 0;
@@ -474,7 +474,7 @@ class NewShipment extends Component {
         formData: {
           ...formData,
           customerCode: value,
-          invoiceDue
+          invoiceDue,
         },
       },
       () => {
@@ -486,7 +486,6 @@ class NewShipment extends Component {
       }
     );
   };
-
 
   render() {
     const { step, formData, tableData, config } = this.state;
@@ -672,7 +671,7 @@ class NewShipment extends Component {
                     rules={[
                       {
                         type: 'number',
-                        min: 0.00,
+                        min: 0.0,
                         message: 'Additional Cost must be greater than 0',
                       },
                     ]}
@@ -698,16 +697,11 @@ class NewShipment extends Component {
                     initialValue={0.0}
                     rules={[
                       {
-                        required: true,
-                        message: 'Deposit Amt is required',
-                      },
-                      {
                         type: 'number',
-                        min: 0.01,
+                        min: 0,
                         message: 'Deposit Amt must be greater than 0',
                       },
                     ]}
-
                   >
                     <InputNumber />
                   </Form.Item>

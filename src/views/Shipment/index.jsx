@@ -211,7 +211,12 @@ export default function Shipment() {
         className={'f-search'}
         onEvent={searchEvent}
         columns={[
-          { type: 'input', prop: 'searchParams', label: '', placeholder: 'Invoice Code'},
+          {
+            type: 'input',
+            prop: 'searchParams',
+            label: '',
+            placeholder: 'Invoice Code',
+          },
           {
             type: 'button-primary',
             prop: 'search',
@@ -267,28 +272,14 @@ export default function Shipment() {
           },
           {
             type: 'text',
-            prop: 'itemCnt',
+            prop: 'invoiceCode',
             label: (
               <div
                 className="sort-container"
-                onClick={() => handleSort('itemCnt')}
+                onClick={() => handleSort('invoiceCode')}
               >
-                Item Cnt {getSortIcon('itemCnt')}
+                invoiceCode {getSortIcon('invoiceCode')}
               </div>
-            ),
-            sorter: true,
-            value: 'text',
-          },
-          {
-            type: 'text',
-            prop: 'invoiceCode',
-            label: (
-                <div
-                    className="sort-container"
-                    onClick={() => handleSort('invoiceCode')}
-                >
-                  invoiceCode {getSortIcon('invoiceCode')}
-                </div>
             ),
             sorter: true,
             value: '-',
@@ -297,26 +288,26 @@ export default function Shipment() {
             type: 'text',
             prop: 'subTotal',
             label: (
-                <div
-                    className="sort-container"
-                    onClick={() => handleSort('subTotal')}
-                >
-                  subTotal {getSortIcon('subTotal')}
-                </div>
+              <div
+                className="sort-container"
+                onClick={() => handleSort('subTotal')}
+              >
+                subTotal {getSortIcon('subTotal')}
+              </div>
             ),
             sorter: true,
             value: '0',
           },
           {
             type: 'text',
-            prop: 'totalPCs',
+            prop: 'totalPcs',
             label: (
-                <div
-                    className="sort-container"
-                    onClick={() => handleSort('totalPCs')}
-                >
-                  totalPCs {getSortIcon('totalPCs')}
-                </div>
+              <div
+                className="sort-container"
+                onClick={() => handleSort('totalPCs')}
+              >
+                totalPCs {getSortIcon('totalPCs')}
+              </div>
             ),
             sorter: true,
             value: '0',
