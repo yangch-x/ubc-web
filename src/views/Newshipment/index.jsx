@@ -63,7 +63,7 @@ const createInvoice = async (saveShipmentData) => {
     const blob = new Blob([response.data], { type: 'application/pdf' });
     const url = window.URL.createObjectURL(blob);
     window.open(url);
-    // history.push('/shipment');
+    history.push('/shipment');
   } catch (error) {
     // 隐藏加载
     hideLoading();
@@ -307,7 +307,7 @@ class NewShipment extends Component {
         invoiceCode: formData.invoiceCode,
         totalPCs: totalPCs,
         totalCartons: totalCartons,
-        subTotal: subTotal,
+        subTotal: subTotal.toFixed(2),
       },
     };
 
