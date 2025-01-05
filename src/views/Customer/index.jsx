@@ -169,6 +169,11 @@ export default function Shipment() {
             label: 'Customer Code',
           },
           {
+            type: 'inputnumber@w200',
+            prop: 'code',
+            label: 'Code',
+          },
+          {
             type: 'input@w200',
             prop: 'country',
             label: 'Country',
@@ -241,7 +246,12 @@ export default function Shipment() {
         className={'f-search'}
         onEvent={searchEvent}
         columns={[
-          { type: 'input', prop: 'searchParams', label: '', placeholder: 'Customer Name' },
+          {
+            type: 'input',
+            prop: 'searchParams',
+            label: '',
+            placeholder: 'Customer Name',
+          },
           {
             type: 'button-primary',
             prop: 'search',
@@ -289,6 +299,20 @@ export default function Shipment() {
                 onClick={() => handleSort('customerCode')}
               >
                 Customer Code {getSortIcon('customerCode')}
+              </div>
+            ),
+            sorter: true,
+            value: 'text',
+          },
+          {
+            type: 'text',
+            prop: 'code',
+            label: (
+              <div
+                className="sort-container"
+                onClick={() => handleSort('code')}
+              >
+                Code {getSortIcon('code')}
               </div>
             ),
             sorter: true,

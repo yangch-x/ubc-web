@@ -59,13 +59,20 @@ export default function Shipment() {
       Modal.confirm({
         content: '确定要删除选中的' + selection.length + '条数据？',
         onOk() {
-          //此处id按实际字段名取
-          //   projectionService
-          //     .deletes(selection.map((el) => el.id))
-          //     .then((res) => {
-          //       message.success('删除成功！');
-          //       loadData();
-          //     });
+          projectionService
+            .batchremove({ ids: selection.map((el) => el.projID) })
+            .then((res) => {
+              if (res.code !== 200) {
+                message.error(`${res.msg}`);
+                return;
+              }
+              message.success('删除成功！');
+              loadData();
+            })
+            .catch((error) => {
+              console.error(error);
+              message.error('删除失败');
+            });
         },
       });
     }
@@ -218,7 +225,12 @@ export default function Shipment() {
         className={'f-search'}
         onEvent={searchEvent}
         columns={[
-          { type: 'input', prop: 'searchParams', label: '', placeholder: 'Customer Code&Po' },
+          {
+            type: 'input',
+            prop: 'searchParams',
+            label: '',
+            placeholder: 'Customer Code&Po',
+          },
           {
             type: 'button-primary',
             prop: 'search',

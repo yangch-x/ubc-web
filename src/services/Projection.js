@@ -13,6 +13,10 @@ class ProjectionService {
   remove(params) {
     return Http.delete(`projection/remove`, params);
   }
+
+  batchremove(params) {
+    return Http.post(`projection/batch_remove`, params);
+  }
 }
 
 const projectionService = new ProjectionService();

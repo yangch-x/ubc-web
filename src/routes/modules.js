@@ -27,5 +27,10 @@ const routes = [
     path: '/newshipment',
     component: () => import('views/Newshipment'),
   },
+  {
+    label: 'PO',
+    path: '/po',
+    component: () => import('views/PO'),
+  },
 ];
 export default routes;

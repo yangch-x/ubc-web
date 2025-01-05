@@ -52,7 +52,21 @@ export default function Shipment() {
   }, []);
   const searchEvent = (params) => {
     if (params.prop === 'search' && params.type === 'click') {
-      setSearchParams(params.row);
+      const searchData = { ...params.row };
+
+      // 格式化日期
+      if (searchData.dueDate) {
+        const date = new Date(searchData.dueDate);
+        searchData.dueDate = `${date.getFullYear()}-${String(
+          date.getMonth() + 1
+        ).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`;
+      }
+
+      setSearchParams({
+        ...searchParams,
+        ...searchData,
+        pageNo: 1,
+      });
     }
   };
   const regionEvent = (params) => {
@@ -216,6 +230,16 @@ export default function Shipment() {
             prop: 'searchParams',
             label: '',
             placeholder: 'Invoice Code',
+          },
+          {
+            type: 'date@YYYY-MM-DD',
+            prop: 'dueDate',
+            label: '',
+            placeholder: '选择日期',
+            config: {
+              format: 'YYYY-MM-DD',
+              valueFormat: 'YYYY-MM-DD',
+            },
           },
           {
             type: 'button-primary',
@@ -396,7 +420,20 @@ export default function Shipment() {
             sorter: true,
             value: 'text',
           },
-
+          {
+            type: 'text',
+            prop: 'dueDate',
+            label: (
+              <div
+                className="sort-container"
+                onClick={() => handleSort('dueDate')}
+              >
+                Due Date {getSortIcon('dueDate')}
+              </div>
+            ),
+            sorter: true,
+            value: 'text',
+          },
           {
             label: '操作',
             width: 200,

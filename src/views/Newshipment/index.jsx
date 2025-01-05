@@ -307,7 +307,7 @@ class NewShipment extends Component {
         invoiceCode: formData.invoiceCode,
         totalPCs: totalPCs,
         totalCartons: totalCartons,
-        subTotal:  parseFloat(subTotal.toFixed(2)),
+        subTotal: parseFloat(subTotal.toFixed(2)),
       },
     };
 
@@ -334,25 +334,25 @@ class NewShipment extends Component {
       const response = info.file.response;
 
       if (response.code === 200) {
-        const data = response.data.res;
-        data.forEach((item) => {
+        const newData = response.data.res;
+        newData.forEach((item) => {
           const po = item.customerPo;
           const style = item.styleCode;
           const color = item.color;
 
           const project = this.calculateProjectInfo(po, style, color);
-          console.log(project);
           item.salePrice = project.salePrice;
           item.styleName = project.styleName;
           item.fabrication = project.fabrication;
           item.size = project.size;
           item.projId = project.projId;
+          // 为每个新项目添加唯一ID
+          item.id = generateUniqueId();
         });
 
-        console.log(data);
-
-        this.setState(() => ({
-          tableData: data,
+        // 修改这里：使用展开运算符将新数据追加到现有数据
+        this.setState((prevState) => ({
+          tableData: [...prevState.tableData, ...newData],
         }));
       } else {
         message.error(`Error: ${response.msg}`);
@@ -973,7 +973,6 @@ class NewShipment extends Component {
             totalCartons += item.cartonCnt;
             subTotal += item.salePrice * item.totalQuantity;
           });
-          subTotal += formData.additionalCost;
           console.log('render step 3', this.state.tableData);
           return (
             <div>

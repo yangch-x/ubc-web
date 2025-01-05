@@ -6,6 +6,13 @@ class ShipmentService {
     return Http.post(`/shipment/search`, params);
   }
 
+  //下载shipment
+  downloadShipment(params) {
+    return Http.post(`/shipment/download`, params, {
+      responseType: 'arraybuffer',
+    });
+  }
+
   //保存Packing
   savePacking(params) {
     return Http.post(`packing/savePacking`, params);
