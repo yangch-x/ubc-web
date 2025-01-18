@@ -4,6 +4,7 @@ import {
   DeleteOutlined,
   SortAscendingOutlined,
   SortDescendingOutlined,
+  DownloadOutlined,
 } from '@ant-design/icons';
 import { Search, Region, Table, Dialog, Form } from 'freedomen';
 import { useState, useCallback, useEffect } from 'react';
@@ -83,6 +84,31 @@ export default function Shipment() {
           //   });
         },
       });
+    } else if (params.prop === 'export' && params.type === 'click') {
+      if (selection.length === 0) {
+        message.warning('请先选择要导出的数据！'); // 提示用户选择数据
+        return; // 退出函数
+      }
+      shipmentService
+        .downloadShipment({ selection })
+        .then((res) => {
+          const blob = new Blob([res], {
+            type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+          });
+          const url = window.URL.createObjectURL(blob);
+          const a = document.createElement('a');
+          a.href = url;
+          a.download = '发票数据.xlsx';
+          document.body.appendChild(a);
+          a.click();
+          a.remove();
+          window.URL.revokeObjectURL(url);
+          message.success('下载成功！');
+        })
+        .catch((error) => {
+          console.error(error);
+          message.error('下载失败！');
+        });
     }
   };
   const tableEvent = (params) => {
@@ -268,6 +294,12 @@ export default function Shipment() {
               },
               config: { danger: true, icon: <DeleteOutlined /> },
             },
+            {
+              type: 'button-primary',
+              prop: 'export',
+              value: '导出',
+              config: { icon: <DownloadOutlined /> },
+            },
             { type: 'space' },
           ],
         ]}
@@ -419,6 +451,7 @@ export default function Shipment() {
             ),
             sorter: true,
             value: 'text',
+            width: 120,
           },
           {
             type: 'text',
@@ -433,6 +466,7 @@ export default function Shipment() {
             ),
             sorter: true,
             value: 'text',
+            width: 120,
           },
           {
             label: '操作',

@@ -2,11 +2,12 @@ import {
   SearchOutlined,
   PlusOutlined,
   DeleteOutlined,
+  DownloadOutlined,
 } from '@ant-design/icons';
 import { Search, Region, Table, Dialog, Form } from 'freedomen';
 import { useState, useCallback, useEffect } from 'react';
 import { message, Modal } from 'antd';
-import projectionService from 'services/Projection';
+import projectionService from 'services/ProjectionPo';
 import styles from './index.module.less';
 import * as systemConfig from 'systemConfig';
 export default function Shipment() {
@@ -60,7 +61,7 @@ export default function Shipment() {
         content: '确定要删除选中的' + selection.length + '条数据？',
         onOk() {
           projectionService
-            .batchremove({ ids: selection.map((el) => el.projID) })
+            .batchremove({ ids: selection.map((el) => el.id) })
             .then((res) => {
               if (res.code !== 200) {
                 message.error(`${res.msg}`);
@@ -75,6 +76,31 @@ export default function Shipment() {
             });
         },
       });
+    } else if (params.prop === 'export' && params.type === 'click') {
+      if (selection.length === 0) {
+        message.warning('请先选择要导出的数据！');
+        return;
+      }
+      projectionService
+        .downloadProjectionPo({ selection })
+        .then((res) => {
+          const blob = new Blob([res], {
+            type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+          });
+          const url = window.URL.createObjectURL(blob);
+          const a = document.createElement('a');
+          a.href = url;
+          a.download = 'po.xlsx';
+          document.body.appendChild(a);
+          a.click();
+          a.remove();
+          window.URL.revokeObjectURL(url);
+          message.success('下载成功！');
+        })
+        .catch((error) => {
+          console.error(error);
+          message.error('下载失败！');
+        });
     }
   };
   const tableEvent = (params) => {
@@ -250,10 +276,16 @@ export default function Shipment() {
               config: { icon: <PlusOutlined /> },
             },
             {
+              type: 'button-primary',
+              prop: 'export',
+              value: '导出',
+              config: { icon: <DownloadOutlined /> },
+            },
+            {
               type: 'upload-primary',
               prop: 'upload',
               config: {
-                action: `${systemConfig.baseURL}/common/upload?usedFor=projection`,
+                action: `${systemConfig.baseURL}/common/upload?usedFor=po`,
                 onSuccess: (res) => {
                   if (res.code === 200) {
                     loadData();

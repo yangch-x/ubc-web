@@ -8,9 +8,13 @@ class ShipmentService {
 
   //下载shipment
   downloadShipment(params) {
-    return Http.post(`/shipment/download`, params, {
-      responseType: 'arraybuffer',
-    });
+    return Http.post(
+      `/shipment/download`,
+      {
+        ids: params.selection.map((item) => item.shipId),
+      },
+      { responseType: 'blob' }
+    );
   }
 
   //保存Packing
