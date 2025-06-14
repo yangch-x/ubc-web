@@ -28,6 +28,20 @@ class ProjectionService {
       { responseType: 'blob' }
     );
   }
+
+  //下载po pdf
+  downloadProjectionPoPdf(params) {
+    return Http.post(
+      `/projectionPo/download/pdf`,
+      {
+        ids: params.selection.map((item) => item.id),
+      },
+      {
+        responseType: 'blob',
+        fullResponse: true, // 返回完整的响应对象，包括headers
+      }
+    );
+  }
 }
 
 const projectionService = new ProjectionService();

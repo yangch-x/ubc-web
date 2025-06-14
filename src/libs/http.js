@@ -32,6 +32,10 @@ axiosInstance.interceptors.request.use(
 
 axiosInstance.interceptors.response.use(
   (response) => {
+    // 如果请求配置中指定了fullResponse，返回完整的响应对象
+    if (response.config.fullResponse) {
+      return response;
+    }
     return response.data;
   },
   (error) => {
