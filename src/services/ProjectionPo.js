@@ -10,6 +10,11 @@ class ProjectionService {
     return Http.post(`projectionPo/saveOrUpdate`, params);
   }
 
+  // 更新表格编辑字段
+  updateFields(params) {
+    return Http.post(`projectionPo/updateFields`, params);
+  }
+
   remove(params) {
     return Http.delete(`projectionPo/remove`, params);
   }

@@ -184,21 +184,34 @@ class NewShipment extends Component {
             'YYYY-MM-DD'
           );
 
-          res.data.shipment.etdDt = etdDtFormatted;
-          res.data.shipment.invoiceDt = invoiceDtFormatted;
-          res.data.shipment.invoiceDue = invoiceDueFormatted;
-          this.setState((prevState) => ({
-            formData: res.data.shipment,
-            tableData: res.data.packings,
-            region: {
-              ...prevState.region,
-              common: {
-                ...prevState.region.common,
-                invoiceId: res.data.shipment.invoiceId,
-                shipmentId: res.data.shipment.shipId,
+          // Map API response fields to form fields correctly
+          const formData = {
+            ...res.data.shipment,
+            etdDt: etdDtFormatted,
+            invoiceDt: invoiceDtFormatted,
+            invoiceDue: invoiceDueFormatted,
+          };
+
+          this.setState(
+            (prevState) => ({
+              formData: formData,
+              tableData: res.data.packings,
+              region: {
+                ...prevState.region,
+                common: {
+                  ...prevState.region.common,
+                  invoiceId: res.data.shipment.invoiceId,
+                  shipmentId: res.data.shipment.shipId,
+                },
               },
-            },
-          }));
+            }),
+            () => {
+              // Update form fields after state is set
+              if (this.form1Ref.current) {
+                this.form1Ref.current.setFieldsValue(formData);
+              }
+            }
+          );
         })
         .catch((error) => {
           console.error(error);
@@ -208,7 +221,12 @@ class NewShipment extends Component {
 
   handleStepChange = (currentStep) => {
     console.log(this.setState.config);
-    this.setState({ step: currentStep });
+    this.setState({ step: currentStep }, () => {
+      // When switching to step 1, ensure form is updated with current data
+      if (currentStep === 1 && this.form1Ref.current) {
+        this.form1Ref.current.setFieldsValue(this.state.formData);
+      }
+    });
   };
 
   handleFormSubmit = (values) => {
@@ -233,6 +251,15 @@ class NewShipment extends Component {
     const customerDueDate =
       this.state.config.customerDueDateMap[values.customerCode];
     console.log(customerDueDate);
+
+    if (!customerDueDate) {
+      message.error(
+        'Customer information not found. Please select a valid customer code.'
+      );
+      hideLoading();
+      return;
+    }
+
     values.billingContact = customerDueDate.billingContact;
     values.shipTo = customerDueDate.shipTo;
     values.term = customerDueDate.paymentTerm;
@@ -432,27 +459,80 @@ class NewShipment extends Component {
     console.log('Formatted date: ', dateString);
 
     let { formData } = this.state;
-    let invoiceDt = formData.invoiceDt;
-    let invoiceDue = formData.invoiceDue;
 
-    if (formData.customerCode && date) {
-      const gap =
-        this.state.config.customerDueDateMap[formData.customerCode].dueDateGap;
-      invoiceDt = date.add(gap, 'days');
-      invoiceDue = date.add(gap, 'days');
-    }
+    // Only update ETD date and Invoice Date, don't calculate Invoice Due here
     this.setState(
       {
         formData: {
           ...formData,
           etdDt: date,
-          invoiceDue,
+          invoiceDt: date, // Set Invoice Date to same as ETD Date initially
         },
       },
       () => {
+        // Update form fields
         this.form1Ref.current?.setFieldsValue({
-          invoiceDue: this.state.formData.invoiceDue,
+          invoiceDt: this.state.formData.invoiceDt,
         });
+
+        // Recalculate Invoice Due if customer is selected
+        if (formData.customerCode && date) {
+          const gap =
+            this.state.config.customerDueDateMap[formData.customerCode]
+              .dueDateGap;
+          const invoiceDue = date.clone().add(gap, 'days');
+          this.setState(
+            {
+              formData: {
+                ...this.state.formData,
+                invoiceDue: invoiceDue,
+              },
+            },
+            () => {
+              this.form1Ref.current?.setFieldsValue({
+                invoiceDue: this.state.formData.invoiceDue,
+              });
+            }
+          );
+        }
+      }
+    );
+  };
+
+  handleInvoiceDtDateChange = (date, dateString) => {
+    console.log('Invoice date selected: ', date);
+    console.log('Invoice date formatted: ', dateString);
+
+    let { formData } = this.state;
+
+    this.setState(
+      {
+        formData: {
+          ...formData,
+          invoiceDt: date,
+        },
+      },
+      () => {
+        // Recalculate Invoice Due if customer is selected
+        if (formData.customerCode && date) {
+          const gap =
+            this.state.config.customerDueDateMap[formData.customerCode]
+              .dueDateGap;
+          const invoiceDue = date.clone().add(gap, 'days');
+          this.setState(
+            {
+              formData: {
+                ...this.state.formData,
+                invoiceDue: invoiceDue,
+              },
+            },
+            () => {
+              this.form1Ref.current?.setFieldsValue({
+                invoiceDue: this.state.formData.invoiceDue,
+              });
+            }
+          );
+        }
       }
     );
   };
@@ -462,11 +542,13 @@ class NewShipment extends Component {
     console.log('Selected Customer Code: ', customerDueDate);
 
     let { formData } = this.state;
-    let invoiceDt = formData.invoiceDt;
     let invoiceDue = formData.invoiceDue;
-    if (formData.etdDt) {
-      invoiceDt = formData.etdDt.add(customerDueDate.dueDateGap, 'days');
-      invoiceDue = formData.etdDt.add(customerDueDate.dueDateGap, 'days');
+
+    // Calculate Invoice Due based on Invoice Date + gap, not ETD Date
+    if (formData.invoiceDt) {
+      invoiceDue = formData.invoiceDt
+        .clone()
+        .add(customerDueDate.dueDateGap, 'days');
     }
 
     this.setState(
@@ -693,7 +775,7 @@ class NewShipment extends Component {
                 <Col span={8}>
                   <Form.Item
                     label="Deposit Amt"
-                    name="depositAmt"
+                    name="receivedAmt"
                     initialValue={0.0}
                     rules={[
                       {
@@ -717,7 +799,7 @@ class NewShipment extends Component {
                       },
                     ]}
                   >
-                    <DatePicker value={formData.invoiceDt} />
+                    <DatePicker onChange={this.handleInvoiceDtDateChange} />
                   </Form.Item>
                 </Col>
                 <Col span={8}>

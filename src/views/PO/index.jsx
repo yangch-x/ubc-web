@@ -4,6 +4,8 @@ import {
   DeleteOutlined,
   DownloadOutlined,
   SaveOutlined,
+  EditOutlined,
+  CloseOutlined,
 } from '@ant-design/icons';
 import { Search, Region, Table, Dialog, Form } from 'freedomen';
 import { useState, useCallback, useEffect } from 'react';
@@ -34,6 +36,11 @@ export default function Shipment() {
   const [currentPoNumber, setCurrentPoNumber] = useState('');
   const [currentRowData, setCurrentRowData] = useState(null);
   const [editablePoItems, setEditablePoItems] = useState([]);
+
+  // 添加表格内编辑相关状态
+  const [editingKeys, setEditingKeys] = useState([]);
+  const [editingData, setEditingData] = useState({});
+  const [originalData, setOriginalData] = useState({}); // 新增：保存原始数据用于比较
 
   const loadData = useCallback(() => {
     console.log('loadData called');
@@ -167,6 +174,231 @@ export default function Shipment() {
     setPoItemsModalVisible(true);
   };
 
+  // 开始编辑某一行
+  const handleEdit = (record) => {
+    console.log('开始编辑，原始记录:', record);
+
+    // 创建一个干净的数据副本，只保留需要的字段
+    const cleanRecord = { ...record };
+
+    setEditingKeys([...editingKeys, record.id]);
+    setEditingData({
+      ...editingData,
+      [record.id]: cleanRecord,
+    });
+    // 保存原始数据用于比较
+    setOriginalData({
+      ...originalData,
+      [record.id]: cleanRecord,
+    });
+
+    console.log('保存的原始数据:', cleanRecord);
+  };
+
+  // 取消编辑
+  const handleCancelEdit = (id) => {
+    setEditingKeys(editingKeys.filter((key) => key !== id));
+    const newEditingData = { ...editingData };
+    const newOriginalData = { ...originalData };
+    delete newEditingData[id];
+    delete newOriginalData[id];
+    setEditingData(newEditingData);
+    setOriginalData(newOriginalData);
+  };
+
+  // 获取修改的字段
+  const getChangedFields = (id) => {
+    const original = originalData[id];
+    const edited = editingData[id];
+
+    if (!original || !edited) return null;
+
+    const changedFields = { id }; // 始终包含ID字段
+
+    console.log('比较原始数据:', original);
+    console.log('比较编辑数据:', edited);
+
+    // 排除计算字段的列表
+    const calculatedFields = ['poQty', 'ttlBuy'];
+
+    // 比较每个字段
+    Object.keys(edited).forEach((key) => {
+      // 跳过计算字段
+      if (calculatedFields.includes(key)) {
+        console.log(`跳过计算字段: ${key}`);
+        return;
+      }
+
+      const originalValue = original[key];
+      const editedValue = edited[key];
+
+      // 对数字字段进行类型转换比较
+      const isNumberField = ['costPrice', 'salePrice', 'ttlSell'].includes(key);
+
+      let hasChanged = false;
+
+      if (isNumberField) {
+        // 数字字段：转换为数字进行比较
+        const originalNum = Number(originalValue) || 0;
+        const editedNum = Number(editedValue) || 0;
+        hasChanged = originalNum !== editedNum;
+
+        console.log(
+          `字段 ${key} (数字): 原始=${originalNum}, 编辑=${editedNum}, 变化=${hasChanged}`
+        );
+      } else {
+        // 字符串字段：转换为字符串进行比较
+        const originalStr = String(originalValue || '');
+        const editedStr = String(editedValue || '');
+        hasChanged = originalStr !== editedStr;
+
+        console.log(
+          `字段 ${key} (字符串): 原始="${originalStr}", 编辑="${editedStr}", 变化=${hasChanged}`
+        );
+      }
+
+      if (hasChanged) {
+        changedFields[key] = editedValue;
+      }
+    });
+
+    console.log('检测到的变化字段:', changedFields);
+
+    // 如果只有ID字段，说明没有修改
+    if (Object.keys(changedFields).length === 1) {
+      console.log('没有检测到字段修改');
+      return null;
+    }
+
+    return changedFields;
+  };
+
+  // 保存编辑
+  const handleSaveEdit = (id) => {
+    const changedFields = getChangedFields(id);
+
+    if (!changedFields) {
+      message.info('没有检测到字段修改');
+      handleCancelEdit(id);
+      return;
+    }
+
+    console.log('将要保存的修改字段:', changedFields);
+
+    projectionService
+      .updateFields(changedFields)
+      .then((res) => {
+        if (res.code !== 200) {
+          message.error(`${res.msg}`);
+          return;
+        }
+        message.success('保存成功！');
+        handleCancelEdit(id);
+        loadData();
+      })
+      .catch((error) => {
+        console.error(error);
+        message.error('保存失败');
+      });
+  };
+
+  // 处理编辑中的数据变更
+  const handleEditDataChange = (id, field, value) => {
+    console.log(
+      `字段变更: id=${id}, field=${field}, value=${value}, type=${typeof value}`
+    );
+
+    setEditingData({
+      ...editingData,
+      [id]: {
+        ...editingData[id],
+        [field]: value,
+      },
+    });
+  };
+
+  // 判断是否正在编辑
+  const isEditing = (record) => editingKeys.includes(record.id);
+
+  // 计算PO Items中所有QTY的总和
+  const calculateTotalQty = (poItems) => {
+    if (!poItems) return 0;
+
+    let items = [];
+    try {
+      if (typeof poItems === 'string') {
+        items = JSON.parse(poItems);
+      } else if (Array.isArray(poItems)) {
+        items = poItems;
+      }
+    } catch (error) {
+      console.error('解析poItems失败:', error);
+      return 0;
+    }
+
+    return items.reduce((total, item) => {
+      const qty = Number(item.qTY) || 0;
+      return total + qty;
+    }, 0);
+  };
+
+  // 计算TTL BUY (QTY/PC * ￥ BUY)
+  const calculateTtlBuy = (record) => {
+    const totalQty = calculateTotalQty(record.poItems);
+    const costPrice = Number(record.costPrice) || 0;
+    return totalQty * costPrice;
+  };
+
+  // 渲染可编辑单元格
+  const renderEditableCell = (text, record, field, type = 'input') => {
+    const editing = isEditing(record);
+
+    // QTY/PC 和 TTL BUY 字段不允许编辑，显示计算值
+    if (field === 'poQty') {
+      const calculatedQty = calculateTotalQty(record.poItems);
+      return <span>{calculatedQty}</span>;
+    }
+
+    if (field === 'ttlBuy') {
+      const calculatedTtlBuy = calculateTtlBuy(record);
+      return <span>{calculatedTtlBuy.toFixed(2)}</span>;
+    }
+
+    let value = editing ? editingData[record.id]?.[field] : text;
+
+    if (!editing) {
+      return text;
+    }
+
+    if (type === 'number') {
+      // 确保数字值的正确显示
+      const numValue =
+        value !== undefined && value !== null ? Number(value) : undefined;
+
+      return (
+        <InputNumber
+          value={numValue}
+          onChange={(val) => handleEditDataChange(record.id, field, val)}
+          style={{ width: '100%' }}
+          placeholder="请输入数字"
+        />
+      );
+    }
+
+    // 确保字符串值的正确显示
+    const strValue = value !== undefined && value !== null ? String(value) : '';
+
+    return (
+      <Input
+        value={strValue}
+        onChange={(e) => handleEditDataChange(record.id, field, e.target.value)}
+        style={{ width: '100%' }}
+        placeholder="请输入内容"
+      />
+    );
+  };
+
+  // PO Items 模态框相关函数
   // 处理表格中单元格的编辑
   const handleCellChange = (value, record, dataIndex, index) => {
     const newData = [...editablePoItems];
@@ -195,16 +427,17 @@ export default function Shipment() {
       return;
     }
 
-    // 创建要保存的数据对象，包含所有原始数据和更新后的poItems
-    // 将poItems转换为JSON字符串
-    const updatedData = {
-      ...currentRowData,
+    // 直接保存PO Items，不进行修改检测
+    const changedData = {
+      id: currentRowData.id,
       poItems: JSON.stringify(editablePoItems),
     };
 
-    // 调用保存接口
+    console.log('保存 PO Items 数据:', changedData);
+
+    // 调用新的updateFields接口，保持与表格编辑一致
     projectionService
-      .saveOrUpdate(updatedData)
+      .updateFields(changedData)
       .then((res) => {
         if (res.code !== 200) {
           message.error(`${res.msg}`);
@@ -222,9 +455,11 @@ export default function Shipment() {
 
   const tableEvent = (params) => {
     if (params.prop === 'edit' && params.type === 'click') {
-      Dialog.open('fdialog', '编辑').then((set) =>
-        set(getDialogForm(params.row))
-      );
+      handleEdit(params.row);
+    } else if (params.prop === 'save' && params.type === 'click') {
+      handleSaveEdit(params.row.id);
+    } else if (params.prop === 'cancel' && params.type === 'click') {
+      handleCancelEdit(params.row.id);
     } else if (params.prop === 'exportPdf' && params.type === 'click') {
       // 导出单行数据为PDF
       projectionService
@@ -328,10 +563,10 @@ export default function Shipment() {
           message.error('PDF导出失败！');
         });
     } else if (params.prop === 'pdel' && params.type === 'confirm') {
-      const { projID } = params.row;
+      const { id } = params.row;
 
       projectionService
-        .remove({ projID })
+        .remove({ projID: id })
         .then((res) => {
           if (res.code !== 200) {
             message.error(`${res.msg}`); // 显示错误消息
@@ -689,93 +924,161 @@ export default function Shipment() {
             type: 'text',
             prop: 'arriveDt',
             label: 'Ex-FTY/In House',
+            render: ({ value, data }) =>
+              renderEditableCell(value, data, 'arriveDt'),
           },
           {
             type: 'text',
             prop: 'customerCode',
             label: 'CUSTOMER',
+            render: ({ value, data }) =>
+              renderEditableCell(value, data, 'customerCode'),
           },
           {
             type: 'button-link',
             prop: 'customerPo',
             label: 'CUSTOMER P.O.',
             value: ({ customerPo }) => customerPo || '',
+            render: ({ value, data }) => {
+              const editing = isEditing(data);
+              if (editing) {
+                return renderEditableCell(value, data, 'customerPo');
+              }
+              return (
+                <Button
+                  type="link"
+                  onClick={() => handlePoClick(data)}
+                  style={{ padding: 0 }}
+                >
+                  {value}
+                </Button>
+              );
+            },
           },
           {
             type: 'text',
             prop: 'styleCode',
             label: 'STYLE NO',
+            render: ({ value, data }) =>
+              renderEditableCell(value, data, 'styleCode'),
           },
           {
             type: 'text',
             prop: 'styleName',
             label: 'DESC/STYLE NAME',
+            render: ({ value, data }) =>
+              renderEditableCell(value, data, 'styleName'),
           },
           {
             type: 'text',
             prop: 'color',
             label: 'COLOR',
+            render: ({ value, data }) =>
+              renderEditableCell(value, data, 'color'),
           },
           {
             type: 'text',
             prop: 'fabrication',
             label: 'FABRICATION',
+            render: ({ value, data }) =>
+              renderEditableCell(value, data, 'fabrication'),
           },
           {
             type: 'text',
             prop: 'poQty',
             label: 'QTY/PC',
+            render: ({ value, data }) =>
+              renderEditableCell(value, data, 'poQty', 'number'),
           },
           {
             type: 'text',
             prop: 'costPrice',
             label: '￥ BUY',
+            render: ({ value, data }) =>
+              renderEditableCell(value, data, 'costPrice', 'number'),
           },
           {
             type: 'text',
             prop: 'ttlBuy',
             label: 'TTL BUY',
+            render: ({ value, data }) =>
+              renderEditableCell(value, data, 'ttlBuy', 'number'),
           },
           {
             type: 'text',
             prop: 'salePrice',
             label: '$ SELL',
+            render: ({ value, data }) =>
+              renderEditableCell(value, data, 'salePrice', 'number'),
           },
           {
             type: 'text',
             prop: 'ttlSell',
             label: 'TTL SELL',
+            render: ({ value, data }) =>
+              renderEditableCell(value, data, 'ttlSell', 'number'),
           },
           {
             type: 'text',
             prop: 'exporter',
             label: 'VENDOR',
+            render: ({ value, data }) =>
+              renderEditableCell(value, data, 'exporter'),
           },
           {
             type: 'text',
             prop: 'waterResistant',
             label: 'WATER RESISTANT / Y/N',
+            render: ({ value, data }) =>
+              renderEditableCell(value, data, 'waterResistant'),
           },
           {
             type: 'text',
             prop: 'notes',
             label: 'NOTE',
+            render: ({ value, data }) =>
+              renderEditableCell(value, data, 'notes'),
           },
           {
             type: 'text',
             prop: 'country',
             label: 'Country&Brand ID',
+            render: ({ value, data }) =>
+              renderEditableCell(value, data, 'country'),
           },
 
           {
             label: '操作',
             width: 260,
-            render() {
+            render({ data }) {
+              const editing = isEditing(data);
+
+              if (editing) {
+                return [
+                  {
+                    type: 'button-link',
+                    prop: 'save',
+                    value: '保存',
+                    config: { icon: <SaveOutlined /> },
+                    className: styles['save'],
+                  },
+                  {
+                    type: 'button-link',
+                    prop: 'cancel',
+                    value: '取消',
+                    config: { icon: <CloseOutlined /> },
+                    className: styles['cancel'],
+                  },
+                  { type: 'space' },
+                ];
+              }
+
               return [
                 {
                   type: 'button-link',
                   prop: 'edit',
                   value: '编辑',
+                  config: { icon: <EditOutlined /> },
                   className: styles['edit'],
                 },
                 {
