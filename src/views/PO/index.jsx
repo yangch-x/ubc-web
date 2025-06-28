@@ -725,7 +725,9 @@ export default function Shipment() {
         <InputNumber
           value={text}
           style={{ width: '100%' }}
-          onChange={(value) => handleCellChange(value, record, 'qTY', index)}
+          onChange={(value) =>
+            handleCellChange(String(value || ''), record, 'qTY', index)
+          }
         />
       ),
     },
